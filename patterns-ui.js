@@ -160,12 +160,12 @@ function patternCard(p) {
     '<svg class="mini" viewBox="' + VB + '" aria-hidden="true">' + courtBase() + courtFrame(n, 0, { showD: p.def !== 'none', arrows: false }) + '</svg>' +
     '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><div class="row"><span class="nm">' + esc(p.name) + '</span>' + (S.fav['p:' + p.id] ? '<span class="star">★</span>' : '') + '</div>' +
     '<div class="sm">' + esc(p.summary || '') + '</div>' +
-    '<div class="row"><span class="tag">' + esc(p.cat) + '</span>' + (p.level ? '<span class="tag lv-' + esc(p.level) + '">' + esc(p.level) + '</span>' : '') + '<span class="tag">' + p.frames.length + '단계</span>' + (p.custom ? '<span class="tag vid">내 패턴</span>' : '') + '</div></div></a>';
+    '<div class="row"><span class="tag">' + esc(p.cat) + '</span>' + (p.level ? '<span class="tag lv-' + esc(p.level) + '">' + esc(p.level) + '</span>' : '') + '<span class="tag">' + p.frames.length + '단계</span>' + (p.custom ? '<span class="tag vid">내 패턴</span>' : '') + masteryTag(p.id) + '</div></div></a>';
 }
 function renderPatternList() {
   var cats = ['전체', '내 패턴'].concat(PCATS);
   var items = allPatterns().filter(function (p) { return pview.cat === '전체' || (pview.cat === '내 패턴' ? p.custom : p.cat === pview.cat) });
-  $('#app').innerHTML = '<div class="top"><h1>패턴</h1><button class="iconbtn" data-act="newpat" aria-label="새 패턴 그리기">＋</button></div><div class="wrap">' +
+  $('#app').innerHTML = '<div class="top"><h1>패턴</h1><button class="iconbtn" data-act="newpat" aria-label="새 패턴 그리기">＋</button></div><div class="wrap">' + patTabs('list') +
     '<div class="tip">코트 위에서 <b>공격·수비·공</b>이 어떻게 움직이는지 단계별로 보고, 배운 패턴은 <b>＋</b>로 직접 그려서 저장하세요.</div>' +
     '<div class="chips">' + cats.map(function (c) { return '<button class="chip' + (pview.cat === c ? ' on' : '') + '" data-pcat="' + c + '">' + c + '</button>' }).join('') + '</div>' +
     (items.length ? '<div class="list">' + items.map(patternCard).join('') + '</div>' : '<div class="empty">' + (pview.cat === '내 패턴' ? '오른쪽 위 ＋ 를 눌러 배운 패턴을 그려보세요' : '패턴이 없어요') + '</div>') + '</div>';
@@ -184,7 +184,7 @@ function renderPatternView(id) {
     '<div class="top"><button class="iconbtn" data-act="back" aria-label="뒤로">←</button><h1 style="font-size:17px">' + esc(p.cat) + '</h1>' +
     '<button class="iconbtn" data-act="pfav" aria-label="즐겨찾기">' + (S.fav['p:' + p.id] ? '★' : '☆') + '</button>' +
     (p.custom ? '<button class="iconbtn" data-act="pedit" aria-label="고치기">✎</button>' : '<button class="iconbtn" data-act="pcopy" title="복사해서 내 패턴으로">⧉</button>') + '</div>' +
-    '<div class="wrap"><div class="hero"><h2>' + esc(p.name) + '</h2>' + (p.en ? '<div class="en">' + esc(p.en) + '</div>' : '') + (p.summary ? '<p>' + esc(p.summary) + '</p>' : '') + '</div>' +
+    '<div class="wrap"><div class="hero"><h2>' + esc(p.name) + ' ' + masteryTag(p.id) + '</h2>' + (p.en ? '<div class="en">' + esc(p.en) + '</div>' : '') + (p.summary ? '<p>' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="court">' + courtSvg('court') + '</div>' + legendHtml(PV.showD) +
     '<div class="pctl"><button class="btn sm" data-act="pfirst" aria-label="처음">⏮</button><button class="btn sm" data-act="pprev">◀ 이전</button>' +
     '<span class="pstep" id="pstep"></span><button class="btn sm" data-act="pnext">다음 ▶</button><button class="btn sm pri" data-act="pplay" id="pplay">▶ 전체 재생</button></div>' +
@@ -192,6 +192,7 @@ function renderPatternView(id) {
     '<div class="pnote" id="pnote"></div>' +
     '<div class="sec"><h3>단계별 움직임</h3><ol class="steps" id="psteps">' + n.frames.map(function (f, i) { return '<li data-pi="' + i + '"><span class="num">' + (i + 1) + '</span><div class="tx">' + esc(f.note || '(설명 없음)') + '</div></li>' }).join('') + '</ol></div>' +
     (p.keys && p.keys.length ? '<div class="sec"><h3>핵심 포인트</h3><div class="checks">' + p.keys.map(function (k) { return '<label><span>✓</span><span>' + esc(k) + '</span></label>' }).join('') + '</div></div>' : '') +
+    '<div class="sec"><h3>📓 내 일지 <button class="btn sm pri" data-act="pjw" style="margin-left:auto">＋ 일지 쓰기</button></h3><div class="jlist">' + (journalOf(p.id).map(journalCard).join('') || '<p class="note" style="margin:0">아직 이 패턴 일지가 없어요. 배운 날 적어두면 복습할 때 좋아요.</p>') + '</div></div>' +
     '<div class="sec"><h3>내 메모</h3><textarea id="pmemo" rows="4" placeholder="배운 내용, 우리 팀에서 쓰는 방법, 코치님 말씀 등을 적어두세요">' + esc(S.pnotes[p.id] || '') + '</textarea></div>' +
     '<div class="sec" style="margin-bottom:24px"><h3>영상으로 더 보기</h3><div class="btns">' + q.map(function (s) { return '<button class="btn ghost" data-pq="' + esc(s) + '">🔎 ' + esc(s) + '</button>' }).join('') + '</div></div></div>';
   var on = function (a, f) { var b = $('[data-act=' + a + ']'); if (b) b.onclick = f };
@@ -206,6 +207,8 @@ function renderPatternView(id) {
   var sd = $('#showD'); if (sd) sd.onchange = function () { PV.showD = sd.checked; pvDraw() };
   $$('[data-pi]').forEach(function (li) { li.onclick = function () { pvStop(); PV.i = +li.dataset.pi; pvDraw(); $('#court').scrollIntoView({ behavior: 'smooth', block: 'center' }) } });
   $('#pmemo').oninput = function () { S.pnotes[p.id] = this.value; save() };
+  on('pjw', function () { journalSheet(null, p.id) });
+  wireJournalCards(function () { renderPatternView(p.id) });
   $$('[data-pq]').forEach(function (b) { b.onclick = function () { openExternal('https://www.youtube.com/results?search_query=' + encodeURIComponent(b.dataset.pq)) } });
   pvDraw();
 }
@@ -275,8 +278,13 @@ function renderPatternEdit(id) {
     '<div class="sec"><h3>패턴 정보</h3>' +
     '<div class="two"><label class="field"><span>분류</span><select class="inp" id="pcat">' + PCATS.concat(['우리 팀']).map(function (c) { return '<option' + (c === p.cat ? ' selected' : '') + '>' + c + '</option>' }).join('') + '</select></label>' +
     '<label class="field"><span>수비</span><select class="inp" id="pdef"><option value="auto"' + (p.def === 'auto' ? ' selected' : '') + '>자동으로 따라가기</option><option value="manual"' + (p.def === 'manual' ? ' selected' : '') + '>직접 배치 (지역방어 등)</option><option value="none"' + (p.def === 'none' ? ' selected' : '') + '>안 보이기</option></select></label></div>' +
-    '<label class="field"><span>한 줄 설명</span><input class="inp" id="psum" value="' + esc(p.summary || '') + '"></label>' +
-    '<label class="field"><span>핵심 포인트 (한 줄에 하나씩)</span><textarea id="pkeys" rows="3">' + esc((p.keys || []).join('\n')) + '</textarea></label>' +
+    '<div class="two"><label class="field"><span>영어 이름 (선택)</span><input class="inp" id="pen" value="' + esc(p.en || '') + '" placeholder="예: Pick and Roll"></label>' +
+    '<label class="field"><span>난이도</span><select class="inp" id="plv">' + ['', '입문', '초급', '중급'].map(function (c) { return '<option value="' + c + '"' + (c === (p.level || '') ? ' selected' : '') + '>' + (c || '선택') + '</option>' }).join('') + '</select></label></div>' +
+    '<label class="field"><span>한 줄 설명 — 어떤 패턴이고 언제 쓰나요?</span><input class="inp" id="psum" value="' + esc(p.summary || '') + '" placeholder="예: 빅맨이 스크린 후 골밑으로 롤해서 패스를 받는 2인 공격"></label>' +
+    '<label class="field"><span>핵심 포인트 (한 줄에 하나씩)</span><textarea id="pkeys" rows="3" placeholder="예: 스크린은 발 넓게, 움직이지 않고&#10;수비가 쏠리면 롤맨에게 패스">' + esc((p.keys || []).join('\n')) + '</textarea></label>' +
+    '<label class="field"><span>유튜브 검색어 (한 줄에 하나씩, 선택)</span><textarea id="pq" rows="2" placeholder="예: 농구 픽앤롤&#10;pick and roll basketball">' + esc((p.q || []).join('\n')) + '</textarea></label>' +
+    '<div class="fmt" id="pcheck"></div>' +
+    '<button class="btn pri" data-act="pjw" style="width:100%;margin-top:12px">📓 이 패턴 일지 쓰기</button>' +
     '<button class="btn" data-act="pdel" style="color:var(--bad);margin:14px 0 24px">이 패턴 삭제</button></div></div>';
   var on = function (a, f) { var b = $('[data-act=' + a + ']'); if (b) b.onclick = f };
   on('back', function () { location.hash = '#/p/' + encodeURIComponent(p.id) });
@@ -284,16 +292,20 @@ function renderPatternEdit(id) {
   on('defreset', function () { PE.p.frames[PE.i].x = {}; if (p.def === 'manual' && PE.i === 0) PE.p.frames[0].x = autoDef(PE.p.frames[0].o); peSave(); peDraw() });
   on('playall', pePlayAll);
   on('pdel', function () { confirmSheet('"' + p.name + '" 패턴을 지울까요?', function () { S.patterns = S.patterns.filter(function (x) { return x.id !== p.id }); delete S.pnotes[p.id]; delete S.fav['p:' + p.id]; save(); location.hash = '#/pat' }) });
-  $('#pname').oninput = function () { p.name = this.value.trim() || '새 패턴'; save() };
+  $('#pname').oninput = function () { p.name = this.value.trim() || '새 패턴'; save(); peCheck() };
   $('#pcat').onchange = function () { p.cat = this.value; save() };
   $('#pdef').onchange = function () {
     p.def = this.value;
     if (p.def === 'manual' && !Object.keys(p.frames[0].x || {}).length) p.frames[0].x = autoDef(p.frames[0].o);
     save(); peDraw();
   };
-  $('#psum').oninput = function () { p.summary = this.value; save() };
-  $('#pkeys').oninput = function () { p.keys = this.value.split('\n').map(function (s) { return s.trim() }).filter(Boolean); save() };
-  $('#fnote').oninput = function () { p.frames[PE.i].note = this.value; save() };
+  $('#psum').oninput = function () { p.summary = this.value; save(); peCheck() };
+  $('#pkeys').oninput = function () { p.keys = this.value.split('\n').map(function (s) { return s.trim() }).filter(Boolean); save(); peCheck() };
+  $('#pq').oninput = function () { p.q = this.value.split('\n').map(function (s) { return s.trim() }).filter(Boolean); save() };
+  $('#pen').oninput = function () { p.en = this.value.trim(); save() };
+  $('#plv').onchange = function () { p.level = this.value; save(); peCheck() };
+  on('pjw', function () { journalSheet(null, p.id) });
+  $('#fnote').oninput = function () { p.frames[PE.i].note = this.value; save(); peCheck() };
   $$('[data-tool]').forEach(function (b) { b.onclick = function () { PE.tool = b.dataset.tool; $$('[data-tool]').forEach(function (x) { x.classList.toggle('on', x === b) }); peHelp() } });
   peWireCourt();
   peDraw(); peHelp();
@@ -313,6 +325,7 @@ function peDraw() {
     '<button class="fchip add" data-act="fadd">＋ 다음 단계</button>' + (p.frames.length > 1 ? '<button class="fchip del" data-act="fdel">이 단계 삭제</button>' : '');
   $('#notelbl').textContent = (i + 1) + '단계 설명 — 어떻게 움직이나요?';
   var ta = $('#fnote'); if (document.activeElement !== ta) ta.value = p.frames[i].note || '';
+  peCheck();
   $$('[data-fi]').forEach(function (b) { b.onclick = function () { PE.i = +b.dataset.fi; peDraw() } });
   $('[data-act=fadd]').onclick = function () {
     var cur = normPattern(p).frames[i];
@@ -362,4 +375,94 @@ function pePlayAll() {
     if (i >= n.frames.length - 1) { setTimeout(function () { if (PE && $('#dyn')) peDraw() }, 1200); return }
     setTimeout(function () { if (!$('#dyn')) return; animate(n, ++i, showD, step) }, 700);
   })();
+}
+
+/* ---------- 기본 패턴 기준 체크 ---------- */
+function patternChecks(p) {
+  var moves = normPattern(p).frames.some(function (f, i, F) { if (!i) return false; var pr = F[i - 1]; return pr.ball !== f.ball || Object.keys(f.o).some(function (k) { return moved(pr.o[k], f.o[k]) }) });
+  return [
+    ['이름 정하기', !!p.name && p.name !== '새 패턴'],
+    ['난이도 고르기', !!p.level],
+    ['한 줄 설명 (어떤 패턴, 언제 쓰나)', (p.summary || '').trim().length >= 5],
+    ['단계 3개 이상 (시작 → 움직임 → 마무리)', p.frames.length >= 3],
+    ['선수·공 움직임 그리기', moves],
+    ['모든 단계에 설명 쓰기', p.frames.every(function (f) { return (f.note || '').trim() })],
+    ['핵심 포인트 2개 이상', (p.keys || []).length >= 2]
+  ];
+}
+function peCheck() {
+  var box = $('#pcheck'); if (!box || !PE) return;
+  var c = patternChecks(PE.p), ok = c.filter(function (x) { return x[1] }).length;
+  box.innerHTML = '<div class="fmth"><b>기본 패턴 기준</b><span class="' + (ok === c.length ? 'good' : '') + '">' + ok + ' / ' + c.length + (ok === c.length ? ' 완성!' : '') + '</span></div>' +
+    c.map(function (x) { return '<div class="fmti' + (x[1] ? ' ok' : '') + '">' + (x[1] ? '✓' : '○') + ' ' + x[0] + '</div>' }).join('');
+}
+
+/* ---------- 배운 패턴 일지 ---------- */
+var MASTERY = ['', '처음 배움', '연습 중', '실전에서 씀'];
+function byDateDesc(a, b) { return b.date < a.date ? -1 : b.date > a.date ? 1 : b.at - a.at }
+function journalOf(pid) { return S.pjournal.filter(function (j) { return j.pid === pid }).sort(byDateDesc) }
+function masteryOf(pid) { var j = journalOf(pid)[0]; return j ? j.lv : 0 }
+function masteryTag(pid) { var m = masteryOf(pid); return m ? '<span class="tag ms ms' + m + '">' + MASTERY[m] + '</span>' : '' }
+function patTabs(on) {
+  return '<div class="seg wide" style="margin-bottom:10px"><button data-ptab="list" class="' + (on === 'list' ? 'on' : '') + '">📋 패턴 목록</button><button data-ptab="journal" class="' + (on === 'journal' ? 'on' : '') + '">📓 배운 패턴 일지</button></div>';
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-ptab]'); if (!b) return;
+  location.hash = b.dataset.ptab === 'journal' ? '#/pj' : '#/pat';
+});
+function journalCard(j) {
+  var p = findPattern(j.pid);
+  var row = function (label, v) { return v ? '<div class="jrow"><small>' + label + '</small><div>' + esc(v) + '</div></div>' : '' };
+  return '<div class="card jcard"><div class="jhead"><div style="flex:1;min-width:0"><a href="#/p/' + encodeURIComponent(j.pid) + '" class="jname">' + esc(p ? p.name : '(지운 패턴)') + '</a>' +
+    '<small>' + esc(j.date) + (j.where ? ' · ' + esc(j.where) : '') + '</small></div><span class="tag ms ms' + j.lv + '">' + MASTERY[j.lv] + '</span>' +
+    '<button class="iconbtn" data-jedit="' + j.at + '" aria-label="고치기" style="width:34px;height:34px;font-size:15px">✎</button></div>' +
+    row('배운 내용', j.learned) + row('잘 된 점', j.good) + row('어려웠던 점', j.hard) + row('다음에 할 것', j.next) + '</div>';
+}
+function wireJournalCards(after) {
+  $$('[data-jedit]').forEach(function (b) { b.onclick = function () { var j = S.pjournal.filter(function (x) { return String(x.at) === b.dataset.jedit })[0]; if (j) journalSheet(j, j.pid, after) } });
+}
+function journalSheet(j, pid, after) {
+  var e = j || { date: today(), pid: pid || '', where: '', learned: '', good: '', hard: '', next: '', lv: masteryOf(pid) || 1 };
+  var lv = e.lv;
+  sheet('<h3>' + (j ? '일지 고치기' : '📓 배운 패턴 일지') + '</h3>' +
+    '<div class="two"><label class="field"><span>날짜</span><input class="inp" type="date" id="jd" value="' + esc(e.date) + '"></label>' +
+    '<label class="field"><span>배운 곳 / 알려준 사람</span><input class="inp" id="jw" value="' + esc(e.where) + '" placeholder="예: 토요일 동호회, 김코치"></label></div>' +
+    '<label class="field"><span>패턴</span><select class="inp" id="jp">' + (e.pid ? '' : '<option value="">패턴 고르기</option>') + allPatterns().map(function (p) { return '<option value="' + esc(p.id) + '"' + (p.id === e.pid ? ' selected' : '') + '>' + esc(p.name) + (p.custom ? ' (내 패턴)' : '') + '</option>' }).join('') + '</select></label>' +
+    (pid ? '' : '<p class="note" style="margin:-4px 0 0">목록에 없으면 <a href="#" id="jnew">＋ 새 패턴부터 그리기</a></p>') +
+    '<div class="field"><span>지금 내 수준</span><div class="feel">' + [1, 2, 3].map(function (n) { return '<button data-jl="' + n + '"' + (n === lv ? ' class="on"' : '') + '>' + MASTERY[n] + '</button>' }).join('') + '</div></div>' +
+    '<label class="field"><span>배운 내용 — 어떻게 움직였나요?</span><textarea id="jl" rows="3" placeholder="예: 5번 스크린 후 롤, 수비가 바꿔 막으면 미스매치 공략">' + esc(e.learned) + '</textarea></label>' +
+    '<label class="field"><span>잘 된 점</span><textarea id="jg" rows="2">' + esc(e.good) + '</textarea></label>' +
+    '<label class="field"><span>어려웠던 점</span><textarea id="jh" rows="2" placeholder="예: 스크린 각도를 자꾸 잘못 섬">' + esc(e.hard) + '</textarea></label>' +
+    '<label class="field"><span>다음에 할 것</span><textarea id="jn" rows="2" placeholder="예: 스크린 각도 영상 다시 보기, 2대2로 10번 연습">' + esc(e.next) + '</textarea></label>' +
+    '<div class="btns"><button class="btn pri" id="ok" style="flex:1">저장</button>' + (j ? '<button class="btn" id="del" style="color:var(--bad)">삭제</button>' : '') + '<button class="btn" id="no">취소</button></div>', function (s, close) {
+      $$('[data-jl]', s).forEach(function (b) { b.onclick = function () { lv = +b.dataset.jl; $$('[data-jl]', s).forEach(function (x) { x.classList.toggle('on', x === b) }) } });
+      $('#no', s).onclick = close;
+      var nw = $('#jnew', s); if (nw) nw.onclick = function (ev) { ev.preventDefault(); close(); newPattern() };
+      $('#ok', s).onclick = function () {
+        var p = $('#jp', s).value; if (!p) { toast('패턴을 골라주세요'); return }
+        var o = { at: j ? j.at : Date.now(), date: $('#jd', s).value || today(), pid: p, where: $('#jw', s).value.trim(), lv: lv,
+          learned: $('#jl', s).value.trim(), good: $('#jg', s).value.trim(), hard: $('#jh', s).value.trim(), next: $('#jn', s).value.trim() };
+        if (j) S.pjournal = S.pjournal.map(function (x) { return x === j ? o : x }); else S.pjournal.push(o);
+        save(); close(); toast('일지를 저장했어요'); (after || route)();
+      };
+      var del = $('#del', s); if (del) del.onclick = function () { close(); confirmSheet('이 일지를 지울까요?', function () { S.pjournal = S.pjournal.filter(function (x) { return x !== j }); save(); (after || route)() }) };
+    });
+}
+var jview = { f: 0 };
+function renderJournal() {
+  var all = S.pjournal.slice().sort(byDateDesc);
+  var learned = {}; all.forEach(function (j) { learned[j.pid] = 1 });
+  var pids = Object.keys(learned), mastered = pids.filter(function (id) { return masteryOf(id) === 3 }).length;
+  var list = jview.f ? all.filter(function (j) { return masteryOf(j.pid) === jview.f }) : all;
+  var h = '<div class="top"><h1>패턴</h1><button class="iconbtn" data-act="jadd" aria-label="일지 쓰기">＋</button></div><div class="wrap">' + patTabs('journal') +
+    '<div class="stats"><div><b>' + pids.length + '</b><small>배운 패턴</small></div><div><b>' + mastered + '</b><small>실전에서 씀</small></div><div><b>' + all.length + '</b><small>일지</small></div></div>' +
+    '<div class="chips">' + [0, 1, 2, 3].map(function (n) { return '<button class="chip' + (jview.f === n ? ' on' : '') + '" data-jf="' + n + '">' + (n ? MASTERY[n] : '전체') + '</button>' }).join('') + '</div>';
+  if (!all.length) h += '<div class="empty">아직 일지가 없어요.<br>패턴을 배운 날 <b>＋</b>를 눌러 적어보세요.<br><br><span class="note">배운 패턴이 목록에 없으면 📋 패턴 목록에서 ＋로 먼저 그리세요.</span></div>';
+  else if (!list.length) h += '<div class="empty">이 수준의 패턴이 없어요</div>';
+  var last = '';
+  list.forEach(function (j) { if (j.date !== last) { last = j.date; h += '<div class="day">' + j.date + (j.date === today() ? ' (오늘)' : '') + '</div>' } h += journalCard(j) });
+  $('#app').innerHTML = h + '<div style="height:16px"></div></div>';
+  $('[data-act=jadd]').onclick = function () { journalSheet(null, null, renderJournal) };
+  $$('[data-jf]').forEach(function (b) { b.onclick = function () { jview.f = +b.dataset.jf; renderJournal() } });
+  wireJournalCards(renderJournal);
 }
