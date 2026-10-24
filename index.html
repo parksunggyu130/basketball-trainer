@@ -49,6 +49,7 @@ a{color:var(--acc)}
 .tag.lv-입문{background:var(--good-soft);color:var(--good)}
 .tag.lv-초급{background:var(--acc-soft);color:var(--acc)}
 .tag.lv-중급{background:var(--bad-soft);color:var(--bad)}
+.tag.lv-고급{background:var(--ink);color:var(--bg)}
 .tag.vid{background:var(--acc);color:var(--acc-ink)}
 .star{font-size:18px;color:var(--acc)}
 .empty{color:var(--sub);text-align:center;padding:40px 10px}
@@ -214,6 +215,15 @@ textarea:focus,.inp:focus{border-color:var(--acc)}
 .jhead small{color:var(--sub);font-size:13px}
 .jrow small{color:var(--sub);font-size:12px;display:block}
 .jrow div{white-space:pre-wrap;font-size:15px}
+.tsit{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:16px}
+.tsit small,.trem small{display:block;font-size:12px;color:var(--sub);font-weight:600;margin-bottom:2px}
+.tlist{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:10px}
+.tlist li{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.tlist b{font-size:16px}
+.tlist p{margin:4px 0 0;color:var(--ink);font-size:15px;line-height:1.6}
+.trem{background:var(--acc-soft);border-radius:14px;padding:12px 14px;margin-top:14px;font-size:17px;font-weight:700}
+.trem small{color:var(--acc)}
+a.chip{text-decoration:none;color:inherit}
 </style>
 </head>
 <body>
@@ -225,6 +235,9 @@ textarea:focus,.inp:focus{border-color:var(--acc)}
   <a href="#/log" data-k="log"><b>📅</b>기록</a>
 </nav>
 <script src="drills.js"></script>
+<script src="drills2.js"></script>
+<script src="tips.js"></script>
+<script src="tips-ui.js"></script>
 <script src="patterns.js"></script>
 <script src="patterns-ui.js"></script>
 <script src="compare.js"></script>
@@ -251,7 +264,7 @@ function openExternal(url){ if(isNative) location.href=url; else window.open(url
 var KEY='bbtrain.v1';
 var S=load();
 function load(){
-  var d={fav:{},media:{},marks:{},stepT:{},logs:[],custom:[],patterns:[],pnotes:{},mine:{},cref:{},pjournal:[]};
+  var d={fav:{},media:{},marks:{},stepT:{},logs:[],custom:[],patterns:[],pnotes:{},mine:{},cref:{},pjournal:[],tnotes:{}};
   try{var o=JSON.parse(localStorage.getItem(KEY)||'{}');for(var k in d) if(o[k]) d[k]=o[k]}catch(e){}
   return d;
 }
@@ -332,11 +345,13 @@ function route(){
   stopPlayer();releaseWake();stopTimer();if(typeof pvStop==='function'){pvStop();stopAnim()}PV=null;PE=null;stopCompare();
   var h=location.hash.replace(/^#/,'')||'/';
   var m;
-  $$('#nav a').forEach(function(a){a.classList.toggle('on',(a.dataset.k==='lib'&&(h==='/'||h.indexOf('/d/')===0||h.indexOf('/c/')===0))||(a.dataset.k==='pat'&&/^\/(pat|pj|p\/|pe\/)/.test(h))||(a.dataset.k==='fav'&&h==='/fav')||(a.dataset.k==='log'&&h==='/log'))});
+  $$('#nav a').forEach(function(a){a.classList.toggle('on',(a.dataset.k==='lib'&&(h==='/'||h==='/tips'||/^\/(d|c|t)\//.test(h)))||(a.dataset.k==='pat'&&/^\/(pat|pj|p\/|pe\/)/.test(h))||(a.dataset.k==='fav'&&h==='/fav')||(a.dataset.k==='log'&&h==='/log'))});
   if((m=h.match(/^\/d\/(.+)$/))) renderDrill(decodeURIComponent(m[1]));
   else if((m=h.match(/^\/c\/(.+)$/))) renderCompare(decodeURIComponent(m[1]));
   else if((m=h.match(/^\/p\/(.+)$/))) renderPatternView(decodeURIComponent(m[1]));
   else if((m=h.match(/^\/pe\/(.+)$/))) renderPatternEdit(decodeURIComponent(m[1]));
+  else if((m=h.match(/^\/t\/(.+)$/))) renderTip(decodeURIComponent(m[1]));
+  else if(h==='/tips') renderTipsList();
   else if(h==='/pat') renderPatternList();
   else if(h==='/pj') renderJournal();
   else if(h==='/fav') renderList(true);
@@ -357,20 +372,25 @@ function renderList(favOnly){
   var cats=['전체'].concat(CATS);
   var all=allDrills().filter(function(d){return !favOnly||S.fav[d.id]});
   var favPats=favOnly?allPatterns().filter(function(p){return S.fav['p:'+p.id]}):[];
+  var favTips=favOnly?TIPS.filter(function(t){return S.fav['t:'+t.id]}):[];
+  var LV=['입문','초급','중급','고급'];
   var q=view.q.trim().toLowerCase();
   var items=all.filter(function(d){
     if(view.cat!=='전체'&&d.cat!==view.cat) return false;
     if(view.lv!=='전체'&&d.level!==view.lv) return false;
     if(q&&(d.name+' '+(d.en||'')+' '+d.summary).toLowerCase().indexOf(q)<0) return false;
     return true;
-  });
+  }).map(function(d,i){return [d,i]}).sort(function(a,b){
+    return (CATS.indexOf(a[0].cat)-CATS.indexOf(b[0].cat))||(LV.indexOf(a[0].level)-LV.indexOf(b[0].level))||(a[1]-b[1]);
+  }).map(function(x){return x[0]});
   $('#app').innerHTML=
     '<div class="top"><h1>'+(favOnly?'즐겨찾기':'농구 훈련')+'</h1>'+(favOnly?'':'<button class="iconbtn" data-act="add" aria-label="내 훈련 추가">＋</button>')+'</div>'+
-    '<div class="wrap"><input class="search" id="q" placeholder="기술 이름 검색 (예: 레이업, crossover)" value="'+esc(view.q)+'">'+
+    '<div class="wrap">'+(favOnly?'':libTabs('drill'))+'<input class="search" id="q" placeholder="기술 이름 검색 (예: 레이업, crossover)" value="'+esc(view.q)+'">'+
     '<div class="chips">'+cats.map(function(c){return '<button class="chip'+(view.cat===c?' on':'')+'" data-cat="'+c+'">'+c+'</button>'}).join('')+'</div>'+
-    '<div class="chips" style="padding-top:0">'+['전체','입문','초급','중급'].map(function(c){return '<button class="chip'+(view.lv===c?' on':'')+'" data-lv="'+c+'">'+(c==='전체'?'모든 난이도':c)+'</button>'}).join('')+'</div>'+
+    '<div class="chips" style="padding-top:0">'+['전체','입문','초급','중급','고급'].map(function(c){return '<button class="chip'+(view.lv===c?' on':'')+'" data-lv="'+c+'">'+(c==='전체'?'모든 난이도':c)+'</button>'}).join('')+'</div>'+
     (items.length?'<div class="list">'+items.map(card).join('')+'</div>':
-      '<div class="empty">'+(favOnly&&!all.length?'훈련·패턴 화면에서 ☆ 를 누르면 여기에 모여요':'맞는 훈련이 없어요')+'</div>')+
+      '<div class="empty">'+(favOnly&&!all.length?(favPats.length||favTips.length?'즐겨찾기한 훈련이 없어요':'훈련·꿀팁·패턴 화면에서 ☆ 를 누르면 여기에 모여요'):'맞는 훈련이 없어요')+'</div>')+
+    (favOnly&&favTips.length?'<div class="sec"><h3>꿀팁</h3><div class="list">'+favTips.map(tipCard).join('')+'</div></div>':'')+
     (favOnly&&favPats.length?'<div class="sec"><h3>패턴</h3><div class="list">'+favPats.map(patternCard).join('')+'</div></div>':'')+
     '</div>';
   $('#q').addEventListener('input',function(e){view.q=e.target.value;var pos=e.target.selectionStart;renderList(favOnly);var n=$('#q');n.focus();n.setSelectionRange(pos,pos)});
@@ -658,7 +678,7 @@ function editDrillSheet(d){
     '<p class="note" style="margin:0">모아 둔 영상이나 코치에게 배운 동작을 나만의 훈련으로 만들 수 있어요. 저장한 뒤 영상을 붙이세요.</p>'+
     '<label class="field"><span>이름</span><input class="inp" id="nm" value="'+esc(e.name||'')+'" placeholder="예: 스핀 무브"></label>'+
     '<div class="two"><label class="field"><span>종류</span><select class="inp" id="ct">'+CATS.map(function(c){return '<option'+(c===e.cat?' selected':'')+'>'+c+'</option>'}).join('')+'</select></label>'+
-    '<label class="field"><span>난이도</span><select class="inp" id="lv">'+['입문','초급','중급'].map(function(c){return '<option'+(c===e.level?' selected':'')+'>'+c+'</option>'}).join('')+'</select></label></div>'+
+    '<label class="field"><span>난이도</span><select class="inp" id="lv">'+['입문','초급','중급','고급'].map(function(c){return '<option'+(c===e.level?' selected':'')+'>'+c+'</option>'}).join('')+'</select></label></div>'+
     '<label class="field"><span>한 줄 설명</span><input class="inp" id="sm" value="'+esc(e.summary||'')+'"></label>'+
     '<label class="field"><span>단계별 동작 (한 줄에 하나씩)</span><textarea id="st" rows="5" placeholder="1단계 설명&#10;2단계 설명">'+esc(e.steps.join('\n'))+'</textarea></label>'+
     '<label class="field"><span>체크포인트 (한 줄에 하나씩)</span><textarea id="ck" rows="3">'+esc((e.checks||[]).join('\n'))+'</textarea></label>'+
