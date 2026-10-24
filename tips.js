@@ -81,7 +81,7 @@ window.TIPS = [
       ['드리블보다 패스가 빠르다', '앞에 비어 있는 동료가 있으면 패스. 공이 사람보다 빠르다.']
     ],
     remember: '넓게, 빠르게, 공보다 앞서서.',
-    drills: ['outlet', 'chestpass'], patterns: [], q: ['속공 3레인', 'fast break three lanes']
+    drills: ['outlet', 'chestpass'], patterns: ['fb-3lane'], q: ['속공 3레인', 'fast break three lanes']
   },
   {
     id: 't-2v1', cat: '속공', level: '중급', title: '2대1 속공',
@@ -94,7 +94,7 @@ window.TIPS = [
       ['레이업까지 패스 1번이면 충분', '패스를 여러 번 주고받다 놓친다. 1번이 원칙.']
     ],
     remember: '수비가 나에게 올 때까지 림으로, 오면 1번 패스.',
-    drills: ['layup-r', 'layup-l', 'chestpass'], q: ['2대1 속공 요령', '2 on 1 fast break']
+    drills: ['layup-r', 'layup-l', 'chestpass'], patterns: ['fb-2v1'], q: ['2대1 속공 요령', '2 on 1 fast break']
   },
   {
     id: 't-3v2', cat: '속공', level: '중급', title: '3대2 속공',
@@ -107,7 +107,7 @@ window.TIPS = [
       ['서두르지 않기', '3대2는 패스 2번이면 노마크가 생긴다. 무리한 레이업보다 노마크 찾기.']
     ],
     remember: '가운데 멈춤 → 윙 → 반대 윙/골밑. 패스 두 번이면 노마크.',
-    drills: ['chestpass', 'catchshoot'], q: ['3대2 속공', '3 on 2 fast break']
+    drills: ['chestpass', 'catchshoot'], patterns: ['fb-3v2'], q: ['3대2 속공', '3 on 2 fast break']
   },
   {
     id: 't-transd', cat: '속공', level: '중급', title: '속공 수비 (백코트)',
@@ -120,7 +120,7 @@ window.TIPS = [
       ['리바운드 후 첫 패스 방해', '공을 놓친 선수는 바로 리바운더 앞에서 손을 들어 아웃렛 패스를 늦춘다.']
     ],
     remember: '골대 먼저, 공 멈추고, 멈추면 말하면서 매치업.',
-    drills: ['zigzag', 'stance'], q: ['트랜지션 디펜스', 'transition defense tips']
+    drills: ['zigzag', 'stance'], patterns: ['fb-transd'], q: ['트랜지션 디펜스', 'transition defense tips']
   },
   {
     id: 't-early', cat: '속공', level: '고급', title: '얼리 오펜스 (속공이 막혔을 때)',
@@ -132,7 +132,7 @@ window.TIPS = [
       ['10초 안에 좋은 슛이 없으면 세트로', '무리하지 말고 공을 돌려 세트 공격.']
     ],
     remember: '수비가 자리 잡기 전 10초가 기회: 트레일러, 드래그 스크린, 미스매치.',
-    patterns: ['pnr', 'pnp'], q: ['얼리 오펜스 트레일러', 'early offense drag screen trailer']
+    patterns: ['fb-trailer', 'pnr'], q: ['얼리 오펜스 트레일러', 'early offense drag screen trailer']
   },
 
   /* ---------- 미스매치 ---------- */

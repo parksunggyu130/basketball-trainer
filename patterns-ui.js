@@ -39,18 +39,28 @@ function courtDefs() {
   function m(id, c) { return '<marker id="' + id + '" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="1.8" markerHeight="1.8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="' + c + '"/></marker>' }
   return '<defs>' + m('ah-o', PCOL.o) + m('ah-d', PCOL.d) + m('ah-p', PCOL.pass) + '</defs>';
 }
-function courtBase() {
-  var L = PCOL.line, w = 'stroke="' + L + '" stroke-width=".35" fill="none"';
-  return '<rect x="-3" y="-5" width="56" height="53" fill="#E4CBA6"/>' +
-    '<rect x="0" y="0" width="50" height="47" fill="#F2E1C4" ' + w.replace('fill="none"', '') + '/>' +
-    '<rect x="17" y="0" width="16" height="19" fill="#E8CDA4" stroke="' + L + '" stroke-width=".35"/>' +
+/* 풀코트(full)면 아래쪽에 우리 골대 반 코트를 뒤집어 붙인다. 공격 방향은 항상 위쪽 골대 */
+function isFull(p) { return p && p.court === 'full' }
+function vbox(full) { return full ? '-3 -5 56 104' : VB }
+function halfMarks(w, L) {
+  return '<rect x="17" y="0" width="16" height="19" fill="#E8CDA4" stroke="' + L + '" stroke-width=".35"/>' +
     '<path d="M19 19 A6 6 0 0 0 31 19" ' + w + '/>' +
     '<path d="M19 19 A6 6 0 0 1 31 19" ' + w + ' stroke-dasharray="1 1"/>' +
     '<path d="M3 0 L3 14 A23.75 23.75 0 0 0 47 14 L47 0" ' + w + '/>' +
     '<path d="M21 5.25 A4 4 0 0 0 29 5.25" ' + w + '/>' +
-    '<path d="M19 47 A6 6 0 0 1 31 47" ' + w + '/>' +
     '<line x1="22" y1="4" x2="28" y2="4" stroke="#6B4423" stroke-width=".55"/>' +
     '<circle cx="25" cy="5.25" r=".75" fill="none" stroke="#D2541B" stroke-width=".35"/>';
+}
+function courtBase(full) {
+  var L = PCOL.line, w = 'stroke="' + L + '" stroke-width=".35" fill="none"';
+  if (!full) return '<rect x="-3" y="-5" width="56" height="53" fill="#E4CBA6"/>' +
+    '<rect x="0" y="0" width="50" height="47" fill="#F2E1C4" stroke="' + L + '" stroke-width=".35"/>' +
+    halfMarks(w, L) + '<path d="M19 47 A6 6 0 0 1 31 47" ' + w + '/>';
+  return '<rect x="-3" y="-5" width="56" height="104" fill="#E4CBA6"/>' +
+    '<rect x="0" y="0" width="50" height="94" fill="#F2E1C4" stroke="' + L + '" stroke-width=".35"/>' +
+    halfMarks(w, L) + '<g transform="matrix(1 0 0 -1 0 94)">' + halfMarks(w, L) + '</g>' +
+    '<line x1="0" y1="47" x2="50" y2="47" ' + w + '/><circle cx="25" cy="47" r="6" ' + w + '/>' +
+    '<text x="25" y="51.5" font-size="1.8" fill="' + L + '" text-anchor="middle" font-family="system-ui,sans-serif">▲ 공격 방향</text>';
 }
 function dist(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]) }
 function moved(a, b) { return a && b && dist(a, b) > 0.5 }
@@ -144,8 +154,8 @@ function animate(n, i, showD, cb) {
     if (t < 1) animRaf = requestAnimationFrame(tick); else { animRaf = 0; cb && cb() }
   })(t0);
 }
-function courtSvg(id, extraCls) {
-  return '<svg id="' + id + '" class="courtsvg' + (extraCls || '') + '" viewBox="' + VB + '" role="img" aria-label="하프코트 그림">' + courtDefs() + courtBase() + '<g id="dyn"></g></svg>';
+function courtSvg(id, extraCls, full) {
+  return '<svg id="' + id + '" class="courtsvg' + (extraCls || '') + (full ? ' full' : '') + '" viewBox="' + vbox(full) + '" role="img" aria-label="' + (full ? '풀코트' : '하프코트') + ' 그림">' + courtDefs() + courtBase(full) + '<g id="dyn"></g></svg>';
 }
 function legendHtml(showD) {
   return '<div class="legend"><span><i class="lg o"></i>공격</span>' + (showD ? '<span><i class="lg d"></i>수비</span>' : '') +
@@ -157,7 +167,7 @@ var pview = { cat: '전체' };
 function patternCard(p) {
   var n = normPattern(p);
   return '<a class="card drill pcard" href="#/p/' + encodeURIComponent(p.id) + '">' +
-    '<svg class="mini" viewBox="' + VB + '" aria-hidden="true">' + courtBase() + courtFrame(n, 0, { showD: p.def !== 'none', arrows: false }) + '</svg>' +
+    '<svg class="mini' + (isFull(p) ? ' full' : '') + '" viewBox="' + vbox(isFull(p)) + '" aria-hidden="true">' + courtBase(isFull(p)) + courtFrame(n, 0, { showD: p.def !== 'none', arrows: false }) + '</svg>' +
     '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><div class="row"><span class="nm">' + esc(p.name) + '</span>' + (S.fav['p:' + p.id] ? '<span class="star">★</span>' : '') + '</div>' +
     '<div class="sm">' + esc(p.summary || '') + '</div>' +
     '<div class="row"><span class="tag">' + esc(p.cat) + '</span>' + (p.level ? '<span class="tag lv-' + esc(p.level) + '">' + esc(p.level) + '</span>' : '') + '<span class="tag">' + p.frames.length + '단계</span>' + (p.custom ? '<span class="tag vid">내 패턴</span>' : '') + masteryTag(p.id) + '</div></div></a>';
@@ -185,7 +195,7 @@ function renderPatternView(id) {
     '<button class="iconbtn" data-act="pfav" aria-label="즐겨찾기">' + (S.fav['p:' + p.id] ? '★' : '☆') + '</button>' +
     (p.custom ? '<button class="iconbtn" data-act="pedit" aria-label="고치기">✎</button>' : '<button class="iconbtn" data-act="pcopy" title="복사해서 내 패턴으로">⧉</button>') + '</div>' +
     '<div class="wrap"><div class="hero"><h2>' + esc(p.name) + ' ' + masteryTag(p.id) + '</h2>' + (p.en ? '<div class="en">' + esc(p.en) + '</div>' : '') + (p.summary ? '<p>' + esc(p.summary) + '</p>' : '') + '</div>' +
-    '<div class="court">' + courtSvg('court') + '</div>' + legendHtml(PV.showD) +
+    '<div class="court">' + courtSvg('court', '', isFull(p)) + '</div>' + legendHtml(PV.showD) +
     '<div class="pctl"><button class="btn sm" data-act="pfirst" aria-label="처음">⏮</button><button class="btn sm" data-act="pprev">◀ 이전</button>' +
     '<span class="pstep" id="pstep"></span><button class="btn sm" data-act="pnext">다음 ▶</button><button class="btn sm pri" data-act="pplay" id="pplay">▶ 전체 재생</button></div>' +
     (p.def !== 'none' ? '<label class="tgl"><input type="checkbox" id="showD" checked> 수비 보이기</label>' : '') +
@@ -271,13 +281,14 @@ function renderPatternEdit(id) {
     '<div class="wrap">' +
     '<div class="seg wide" id="tools"><button data-tool="move" class="on">✋ 선수 옮기기</button><button data-tool="ball">🏀 공 주기</button><button data-tool="screen">┳ 스크린</button></div>' +
     '<p class="note" id="toolhelp" style="margin:6px 0"></p>' +
-    '<div class="court">' + courtSvg('court', ' edit') + '</div>' + legendHtml(p.def !== 'none') +
+    '<div class="court">' + courtSvg('court', ' edit', isFull(p)) + '</div>' + legendHtml(p.def !== 'none') +
     '<div class="frames" id="frames"></div>' +
     '<label class="field" style="margin-top:10px"><span id="notelbl">이 단계 설명</span><textarea id="fnote" rows="3" placeholder="예: 5번이 올라와 1번 수비에게 스크린"></textarea></label>' +
     '<div class="btns" style="margin-top:8px"><button class="btn sm" data-act="defreset">수비 자동 위치로</button><button class="btn sm" data-act="playall">▶ 처음부터 움직임 보기</button></div>' +
     '<div class="sec"><h3>패턴 정보</h3>' +
     '<div class="two"><label class="field"><span>분류</span><select class="inp" id="pcat">' + PCATS.concat(['우리 팀']).map(function (c) { return '<option' + (c === p.cat ? ' selected' : '') + '>' + c + '</option>' }).join('') + '</select></label>' +
     '<label class="field"><span>수비</span><select class="inp" id="pdef"><option value="auto"' + (p.def === 'auto' ? ' selected' : '') + '>자동으로 따라가기</option><option value="manual"' + (p.def === 'manual' ? ' selected' : '') + '>직접 배치 (지역방어 등)</option><option value="none"' + (p.def === 'none' ? ' selected' : '') + '>안 보이기</option></select></label></div>' +
+    '<label class="field"><span>코트</span><select class="inp" id="pcourt"><option value="half">하프코트</option><option value="full"' + (isFull(p) ? ' selected' : '') + '>풀코트 (속공·프레스)</option></select></label>' +
     '<div class="two"><label class="field"><span>영어 이름 (선택)</span><input class="inp" id="pen" value="' + esc(p.en || '') + '" placeholder="예: Pick and Roll"></label>' +
     '<label class="field"><span>난이도</span><select class="inp" id="plv">' + ['', '입문', '초급', '중급', '고급'].map(function (c) { return '<option value="' + c + '"' + (c === (p.level || '') ? ' selected' : '') + '>' + (c || '선택') + '</option>' }).join('') + '</select></label></div>' +
     '<label class="field"><span>한 줄 설명 — 어떤 패턴이고 언제 쓰나요?</span><input class="inp" id="psum" value="' + esc(p.summary || '') + '" placeholder="예: 빅맨이 스크린 후 골밑으로 롤해서 패스를 받는 2인 공격"></label>' +
@@ -294,6 +305,7 @@ function renderPatternEdit(id) {
   on('pdel', function () { confirmSheet('"' + p.name + '" 패턴을 지울까요?', function () { S.patterns = S.patterns.filter(function (x) { return x.id !== p.id }); delete S.pnotes[p.id]; delete S.fav['p:' + p.id]; save(); location.hash = '#/pat' }) });
   $('#pname').oninput = function () { p.name = this.value.trim() || '새 패턴'; save(); peCheck() };
   $('#pcat').onchange = function () { p.cat = this.value; save() };
+  $('#pcourt').onchange = function () { p.court = this.value === 'full' ? 'full' : undefined; save(); renderPatternEdit(p.id) };
   $('#pdef').onchange = function () {
     p.def = this.value;
     if (p.def === 'manual' && !Object.keys(p.frames[0].x || {}).length) p.frames[0].x = autoDef(p.frames[0].o);
@@ -338,7 +350,7 @@ function peDraw() {
 function svgPoint(svg, e) {
   var pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
   var r = pt.matrixTransform(svg.getScreenCTM().inverse());
-  return [Math.max(-2, Math.min(52, r.x)), Math.max(-4, Math.min(47.5, r.y))];
+  return [Math.max(-2, Math.min(52, r.x)), Math.max(-4, Math.min(PE && isFull(PE.p) ? 98 : 47.5, r.y))];
 }
 function peWireCourt() {
   var svg = $('#court');
