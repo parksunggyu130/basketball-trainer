@@ -168,7 +168,7 @@ function patternCard(p) {
   var n = normPattern(p);
   return '<a class="card drill pcard" href="#/p/' + encodeURIComponent(p.id) + '">' +
     '<svg class="mini' + (isFull(p) ? ' full' : '') + '" viewBox="' + vbox(isFull(p)) + '" aria-hidden="true">' + courtBase(isFull(p)) + courtFrame(n, 0, { showD: p.def !== 'none', arrows: false }) + '</svg>' +
-    '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><div class="row"><span class="nm">' + esc(p.name) + '</span>' + (S.fav['p:' + p.id] ? '<span class="star">★</span>' : '') + '</div>' +
+    '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><div class="row"><span class="nm">' + esc(p.name) + '</span>' + '' + '</div>' +
     '<div class="sm">' + esc(p.summary || '') + '</div>' +
     '<div class="row"><span class="tag">' + esc(p.cat) + '</span>' + (p.level ? '<span class="tag lv-' + esc(p.level) + '">' + esc(p.level) + '</span>' : '') + '<span class="tag">' + p.frames.length + '단계</span>' + (p.custom ? '<span class="tag vid">내 패턴</span>' : '') + masteryTag(p.id) + '</div></div></a>';
 }
@@ -203,7 +203,6 @@ function renderPatternView(id) {
   var q = p.q || [p.name + ' 농구'];
   $('#app').innerHTML =
     '<div class="top"><button class="iconbtn" data-act="back" aria-label="뒤로">←</button><h1 style="font-size:17px">' + esc(p.cat) + '</h1>' +
-    '<button class="iconbtn" data-act="pfav" aria-label="즐겨찾기">' + (S.fav['p:' + p.id] ? '★' : '☆') + '</button>' +
     (p.custom ? '<button class="iconbtn" data-act="pedit" aria-label="고치기">✎</button>' : '<button class="iconbtn" data-act="pcopy" title="복사해서 내 패턴으로">⧉</button>') + '</div>' +
     '<div class="wrap"><div class="hero"><h2>' + esc(p.name) + ' ' + masteryTag(p.id) + '</h2>' + (p.en ? '<div class="en">' + esc(p.en) + '</div>' : '') + (p.summary ? '<p>' + esc(p.summary) + '</p>' : '') + '</div>' +
     '<div class="court tapnext">' + courtSvg('court', '', isFull(p)) + '</div>' +
