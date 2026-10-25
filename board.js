@@ -11,17 +11,29 @@ var BD = null; // 화면 상태 { tool, drag, cur, hist }
 function bdState() {
   var b = S.board;
   if (!b || !b.mags) b = S.board = { court: 'half', strokes: [], mags: [], color: '#1D1B19', size: '.6', trails: true };
-  if (!b.mags.length && !b.inited) { bdLayout(b); b.inited = true }
+  /* 처음엔 빈 코트: 예전 버전의 '기본 배치'가 그대로 남아 있으면 비운다 (그린 선이 없을 때만) */
+  if (!b.v2) { if (b.inited && !b.strokes.length) b.mags = []; b.v2 = true; delete b.inited }
+  if (b.autoD == null) b.autoD = true;
   return b;
 }
 function bdFull(b) { return b.court === 'full' }
-/* 기본 배치: 공격 5명(5아웃) + 각자 수비 + 공은 1번 */
-function bdLayout(b) {
-  var o = FIVE_OUT, x = autoDef(o), m = [], k;
-  for (k in o) m.push({ id: 'o' + k, t: 'o', n: k, x: o[k][0], y: o[k][1] });
-  for (k in x) m.push({ id: 'x' + k, t: 'x', n: k, x: +x[k][0].toFixed(2), y: +x[k][1].toFixed(2) });
-  m.push({ id: 'b1', t: 'b', x: o[1][0], y: o[1][1], at: 'o1' });
-  b.mags = m; b.strokes = b.strokes.filter(function (s) { return !s.t });
+/* 선수 놓기: 찍은 곳에 다음 번호 공격 + (켜져 있으면) 그 선수를 막는 수비를 골대 쪽에 + 공이 없으면 공 */
+function bdPlace(pt) {
+  var b = S.board, used = {}, n = 1;
+  b.mags.forEach(function (q) { if (q.t === 'o') used[q.n] = 1 });
+  while (used[n]) n++;
+  if (n > 9) { toast('9명까지 놓을 수 있어요'); return }
+  bdSnap();
+  var o = { id: 'o' + n, t: 'o', n: String(n), x: pt[0], y: pt[1] };
+  b.mags.push(o);
+  var msg = n + '번 공격';
+  if (b.autoD && !b.mags.some(function (q) { return q.t === 'x' && q.n === String(n) })) {
+    var d = autoDef({ 1: pt })[1];
+    b.mags.push({ id: 'x' + n, t: 'x', n: String(n), x: +d[0].toFixed(2), y: +d[1].toFixed(2) });
+    msg += '·수비';
+  }
+  if (!b.mags.some(function (q) { return q.t === 'b' })) { b.mags.push({ id: 'b' + Date.now().toString(36), t: 'b', x: pt[0], y: pt[1], at: o.id }); msg += '·공' }
+  save(); bdDraw(); toast(msg + '을 놓았어요');
 }
 function bdSnap() { BD.hist.push(JSON.stringify({ s: S.board.strokes, m: S.board.mags })); if (BD.hist.length > 40) BD.hist.shift() }
 function bdMagSvg(g) {
@@ -50,19 +62,20 @@ function bdPoint(e) {
 }
 function renderBoard() {
   var b = bdState();
-  BD = { tool: (S.ui && S.ui.bdTool) || 'pen', drag: null, hist: [] };
+  BD = { tool: !b.mags.length ? 'place' : (S.ui && S.ui.bdTool) || 'place', drag: null, hist: [] };
   $('#app').innerHTML =
     '<div class="top"><h1>🧲 작전판</h1><div class="seg" id="bdcourt"><button data-court="half">반코트</button><button data-court="full">풀코트</button></div></div>' +
     '<div class="wrap bdwrap">' +
-    '<div class="seg wide" id="bdtools"><button data-tool="pen">✏️ 펜</button><button data-tool="erase">🧽 지우개</button><button data-tool="del">🗑 자석 빼기</button></div>' +
+    '<div class="seg wide" id="bdtools"><button data-tool="place">👆 선수 놓기</button><button data-tool="pen">✏️ 펜</button><button data-tool="erase">🧽 지우개</button><button data-tool="del">🗑 자석 빼기</button></div>' +
     '<div class="bdpens" id="bdpens">' + BD_COLORS.map(function (c) { return '<button class="sw" data-color="' + c[0] + '" style="background:' + c[0] + '" aria-label="' + c[1] + '"></button>' }).join('') +
       '<span class="bdsz">' + BD_SIZES.map(function (s) { return '<button data-size="' + s[0] + '" aria-label="' + s[1] + '"><i style="height:' + (s[0] * 9 + 1) + 'px"></i></button>' }).join('') + '</span></div>' +
     '<div class="court bdcourt"><svg id="bd" class="courtsvg bdsvg"></svg></div>' +
     '<p class="note" id="bdhint" style="text-align:center;margin:4px 0 0"></p>' +
-    '<div class="bdmags"><button class="btn" data-add="o"><span class="dot o"></span>공격</button><button class="btn" data-add="x"><span class="dot x"></span>수비</button><button class="btn" data-add="b"><span class="dot b"></span>공</button><button class="btn" data-act="layout">↺ 기본 배치</button></div>' +
+    '<div class="bdmags"><button class="btn" data-add="o"><span class="dot o"></span>공격</button><button class="btn" data-add="x"><span class="dot x"></span>수비</button><button class="btn" data-add="b"><span class="dot b"></span>공</button></div>' +
     '<div class="bdmags"><button class="btn" data-act="undo">↶ 되돌리기</button><button class="btn" data-act="clrline">선만 지우기</button><button class="btn" data-act="clrall" style="color:var(--bad)">모두 지우기</button></div>' +
+    '<label class="tgl"><input type="checkbox" id="bdautod"> 공격을 놓으면 수비도 같이 놓기</label>' +
     '<label class="tgl"><input type="checkbox" id="bdtrail"> 자석이 움직인 길 보이기</label>' +
-    '<div class="tip" style="margin:10px 0 24px"><b>이렇게 써요</b> · <b>자석</b>은 손가락으로 끌어서 옮겨요 (움직인 길이 화살표로 남아요). <b>빈 곳</b>을 문지르면 펜으로 그려져요. 공을 선수 위에 놓으면 그 선수와 같이 움직여요.</div>' +
+    '<div class="tip" style="margin:10px 0 24px"><b>이렇게 써요</b> · ① <b>👆 선수 놓기</b>로 코트를 누르면 공격이 놓이고 수비도 같이 나와요. ② 자석을 손가락으로 끌어 옮겨요 (움직인 길이 화살표로 남아요). ③ <b>✏️ 펜</b>으로 빈 곳에 그려요. 공을 선수 위에 놓으면 같이 움직여요.</div>' +
     '</div>';
   bdUI(); bdDraw(); bdWire();
 }
@@ -73,10 +86,12 @@ function bdUI() {
   $$('[data-color]').forEach(function (x) { x.classList.toggle('on', x.dataset.color === b.color) });
   $$('[data-size]').forEach(function (x) { x.classList.toggle('on', x.dataset.size === b.size) });
   $('#bdpens').style.opacity = BD.tool === 'pen' ? 1 : .45;
+  $('#bdpens').hidden = BD.tool !== 'pen' && BD.tool !== 'erase';
   $('#bdtrail').checked = b.trails !== false;
+  $('#bdautod').checked = !!b.autoD;
   $('#bd').classList.toggle('full', bdFull(b));
   $('#bd').setAttribute('viewBox', bdFull(b) ? '-3 -5 56 104' : '-3 -5 56 53');
-  $('#bdhint').textContent = { pen: '빈 곳을 문지르면 그려져요 · 자석은 끌어서 옮겨요', erase: '지울 선을 문질러요 · 자석은 끌어서 옮겨요', del: '뺄 자석을 눌러요' }[BD.tool];
+  $('#bdhint').textContent = { place: '공격 선수를 놓을 곳을 누르세요 · 놓은 자석은 끌어서 옮겨요', pen: '빈 곳을 문지르면 그려져요 · 자석은 끌어서 옮겨요', erase: '지울 선을 문질러요 · 자석은 끌어서 옮겨요', del: '뺄 자석을 눌러요' }[BD.tool];
 }
 function bdWire() {
   var b = S.board, svg = $('#bd');
@@ -85,9 +100,9 @@ function bdWire() {
   $$('[data-color]').forEach(function (x) { x.onclick = function () { b.color = x.dataset.color; BD.tool = 'pen'; save(); bdUI() } });
   $$('[data-size]').forEach(function (x) { x.onclick = function () { b.size = x.dataset.size; BD.tool = 'pen'; save(); bdUI() } });
   $('#bdtrail').onchange = function () { b.trails = this.checked; save(); bdDraw() };
+  $('#bdautod').onchange = function () { b.autoD = this.checked; save() };
   $$('[data-add]').forEach(function (x) { x.onclick = function () { bdAdd(x.dataset.add) } });
   var on = function (a, f) { $$('[data-act=' + a + ']').forEach(function (x) { x.onclick = f }) };
-  on('layout', function () { bdSnap(); bdLayout(b); save(); bdDraw(); toast('기본 배치로 놓았어요') });
   on('undo', function () { var h = BD.hist.pop(); if (!h) { toast('더 되돌릴 게 없어요'); return } h = JSON.parse(h); b.strokes = h.s; b.mags = h.m; save(); bdDraw() });
   on('clrline', function () { if (!b.strokes.length) return; bdSnap(); b.strokes = []; save(); bdDraw(); toast('선을 지웠어요 (자석은 그대로)') });
   on('clrall', function () { confirmSheet('그림과 자석을 모두 지울까요?', function () { bdSnap(); b.strokes = []; b.mags = []; save(); bdDraw() }) });
@@ -107,6 +122,7 @@ function bdWire() {
       return;
     }
     if (BD.tool === 'del') return;
+    if (BD.tool === 'place') { bdPlace(pt); return }
     bdSnap();
     if (BD.tool === 'erase') { BD.drag = { id: e.pointerId, erase: true, n: 0 }; bdErase(pt); return }
     var s = { c: b.color, w: +b.size, p: [pt] };
