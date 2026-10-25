@@ -20,24 +20,81 @@ function autoDef(o) {
   }
   return x;
 }
+/* 스크린 규칙 (수비 '자동으로 따라가기'일 때): 수비는 스크린 거는 공격수 몸을 뚫고 지나가지 못한다.
+   screenMode 'around' = 스크린을 돌아서 가느라 늦게 도착, 'stop' = 스크린에 막혀 멈춤, 'off' = 그냥 통과(예전 방식)
+   autoScreen = 공격수가 다른 선수의 수비 바로 앞에 서면 자동으로 스크린. 기본 패턴은 off, 내가 그린 패턴은 켜짐 */
+function scrMode(p) { return p.screenMode || (p.custom ? 'around' : 'off') }
+function autoScr(p) { return p.autoScreen != null ? p.autoScreen : !!p.custom }
+var SCR_R = 3, SCR_NEAR = 3.6, SCR_COST = 3; // 몸 반지름 합, 자동 스크린 거리, 부딪혀서 잃는 거리 (피트)
+function segNear(a, b, c) {
+  var dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy, t = L2 ? ((c[0] - a[0]) * dx + (c[1] - a[1]) * dy) / L2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  return [t, Math.hypot(a[0] + dx * t - c[0], a[1] + dy * t - c[1])];
+}
+function pathLen(pts) { var s = 0; for (var i = 1; i < pts.length; i++) s += dist(pts[i - 1], pts[i]); return s }
+/* 꺾인 길 pts 를 따라 len 만큼 간 곳과, 거기까지의 길 */
+function alongPath(pts, len) {
+  var out = [pts[0]];
+  for (var i = 1; i < pts.length; i++) {
+    var d = dist(pts[i - 1], pts[i]);
+    if (len <= d) { var q = d ? lerp(pts[i - 1], pts[i], len / d) : pts[i]; out.push(q); return { pos: q, path: out } }
+    len -= d; out.push(pts[i]);
+  }
+  return { pos: pts[pts.length - 1], path: out };
+}
+/* 수비가 a → b 로 가는 길에 스크린(cs: 공격수 위치들)이 있으면 막힌 결과 { to, path, hit } */
+function blockDef(a, b, cs, mode) {
+  var best = null;
+  cs.forEach(function (c) {
+    if (dist(a, c) < SCR_R * .8) return;
+    var r = segNear(a, b, c);
+    if (r[1] < SCR_R && r[0] > .02 && (!best || r[0] < best.t)) best = { t: r[0], d: r[1], c: c };
+  });
+  if (!best) return null;
+  var L = dist(a, b), tc = Math.max(0, best.t - Math.sqrt(Math.max(0, SCR_R * SCR_R - best.d * best.d)) / (L || 1)), contact = lerp(a, b, tc);
+  if (mode === 'stop') return { to: contact, path: [a, contact], hit: best.c };
+  var cl = lerp(a, b, best.t), nx = cl[0] - best.c[0], ny = cl[1] - best.c[1], nd = Math.hypot(nx, ny);
+  if (nd < .01) { nx = -(b[1] - a[1]); ny = b[0] - a[0]; nd = Math.hypot(nx, ny) || 1 }
+  var w = [best.c[0] + nx / nd * SCR_R * 1.4, best.c[1] + ny / nd * SCR_R * 1.4];
+  var r = alongPath([a, contact, w, b], Math.max(0, L - SCR_COST));
+  return { to: r.pos, path: r.path, hit: best.c };
+}
 /* 프레임마다 빠진 값은 앞 프레임에서 이어받아 완성된 위치로 만든다 */
 function normPattern(p) {
-  var out = [], pO = {}, pX = {}, pB = null;
+  var out = [], pO = {}, pX = {}, pB = null, act = null, pScr = [];
+  var mode = p.def === 'auto' || !p.def ? scrMode(p) : 'off', auto = mode !== 'off' && autoScr(p);
   p.frames.forEach(function (f) {
     var o = Object.assign({}, pO, clone(f.o || {}));
-    var ball = f.ball != null ? String(f.ball) : pB, x, k;
+    var ball = f.ball != null ? String(f.ball) : pB, x, k, xp = {}, hits = [];
+    var scr = (f.screen || []).map(String);
     if (p.def === 'manual') { x = Object.assign({}, pX, clone(f.x || {})); pX = x }
     else if (p.def === 'none') x = {};
-    else { x = autoDef(o); for (k in (f.x || {})) x[k] = f.x[k] }
-    var oo = o, xx = x, sc = (f.screen || []).map(String), bb = ball;
+    else {
+      x = autoDef(o);
+      if (mode !== 'off' && act) {
+        /* 자동 스크린: 다른 선수의 수비(앞 단계 위치) 바로 앞에 선 공격수 */
+        if (auto) for (k in o) for (var j in act) if (j !== k && dist(o[k], act[j]) < SCR_NEAR && scr.indexOf(k) < 0) scr.push(k);
+        /* 앞 단계에서 스크린을 걸고 그대로 서 있는 선수도 계속 스크린 */
+        var cs = scr.concat(pScr.filter(function (s) { return scr.indexOf(s) < 0 && o[s] && !moved(pO[s], o[s]) }));
+        for (k in x) {
+          if ((f.x && f.x[k]) || !act[k]) continue;
+          var r = blockDef(act[k], x[k], cs.filter(function (s) { return s !== k && o[s] }).map(function (s) { return o[s] }), mode);
+          if (r) { x[k] = r.to; xp[k] = r.path; hits.push({ k: k, c: r.hit }) }
+        }
+      }
+      for (k in (f.x || {})) x[k] = f.x[k];
+      act = x;
+    }
+    var oo = o, xx = x, sc = scr, bb = ball;
     if (p.n && p.n < 5) {
       oo = {}; xx = {};
       for (k in o) if (+k <= p.n) oo[k] = o[k];
       for (k in x) if (+k <= p.n) xx[k] = x[k];
       sc = sc.filter(function (q) { return +q <= p.n }); if (bb && +bb > p.n) bb = null;
+      hits = hits.filter(function (h) { return +h.k <= p.n });
     }
-    out.push({ o: oo, x: xx, ball: bb, screen: sc, note: f.note || '' });
-    pO = o; pB = ball;
+    out.push({ o: oo, x: xx, ball: bb, screen: sc, note: f.note || '', xp: xp, hits: hits });
+    pO = o; pB = ball; pScr = scr;
   });
   return { frames: out };
 }
@@ -121,7 +178,12 @@ function courtFrame(n, i, opt) {
   var showD = opt.showD !== false;
   if (prev && opt.arrows !== false) {
     for (k in cur.o) if (moved(prev.o[k], cur.o[k])) h += offPlayer(k, prev.o[k], true);
-    if (showD) for (k in cur.x) if (moved(prev.x[k], cur.x[k])) { h += defPlayer(k, prev.x[k], true); h += arrowLine(prev.x[k], cur.x[k], PCOL.d, 'ah-d', { w: .3, dash: '.5 .4' }) }
+    if (showD) for (k in cur.x) if (moved(prev.x[k], cur.x[k])) {
+      h += defPlayer(k, prev.x[k], true);
+      var xp = cur.xp && cur.xp[k];
+      if (xp && xp.length > 2) { for (var s = 1; s < xp.length - 1; s++) if (moved(xp[s - 1], xp[s])) h += '<line x1="' + f1(xp[s - 1][0]) + '" y1="' + f1(xp[s - 1][1]) + '" x2="' + f1(xp[s][0]) + '" y2="' + f1(xp[s][1]) + '" stroke="' + PCOL.d + '" stroke-width=".3" stroke-dasharray=".5 .4"/>'; h += arrowLine(xp[xp.length - 2], cur.x[k], PCOL.d, 'ah-d', { w: .3, dash: '.5 .4' }) }
+      else h += arrowLine(prev.x[k], cur.x[k], PCOL.d, 'ah-d', { w: .3, dash: '.5 .4' });
+    }
     for (k in cur.o) {
       if (!moved(prev.o[k], cur.o[k])) continue;
       if (cur.screen.indexOf(k) >= 0) h += arrowLine(prev.o[k], cur.o[k], PCOL.o, null);
@@ -133,6 +195,7 @@ function courtFrame(n, i, opt) {
   }
   cur.screen.forEach(function (s) { if (cur.o[s]) h += screenBar(s, cur, prev) });
   if (showD) for (k in cur.x) h += defPlayer(k, cur.x[k]);
+  if (showD) (cur.hits || []).forEach(function (q) { var c = q.c, m = lerp(c, cur.x[q.k] || c, .5); h += '<text x="' + f1(m[0]) + '" y="' + f1(m[1]) + '" font-size="2.6" text-anchor="middle" dominant-baseline="central" pointer-events="none">💥</text>' });
   for (k in cur.o) h += offPlayer(k, cur.o[k], false, opt.sel === k);
   if (cur.ball && cur.o[cur.ball]) h += ballAt(cur.o[cur.ball]);
   return h;
@@ -143,7 +206,7 @@ function lerp(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) 
 function courtTween(n, i, t, showD) {
   var prev = n.frames[i - 1], cur = n.frames[i], e = ease(t), h = '', k, pos = {};
   for (k in cur.o) pos[k] = lerp(prev.o[k] || cur.o[k], cur.o[k], e);
-  if (showD) for (k in cur.x) h += defPlayer(k, lerp(prev.x[k] || cur.x[k], cur.x[k], e));
+  if (showD) for (k in cur.x) { var xp = cur.xp && cur.xp[k]; h += defPlayer(k, xp ? alongPath(xp, pathLen(xp) * e).pos : lerp(prev.x[k] || cur.x[k], cur.x[k], e)) }
   for (k in cur.o) h += offPlayer(k, pos[k]);
   if (cur.ball && pos[cur.ball]) {
     if (prev.ball && prev.ball !== cur.ball && pos[prev.ball]) h += ballAt(lerp(pos[prev.ball], pos[cur.ball], ease(Math.min(1, Math.max(0, (t - .1) / .6)))));
@@ -319,6 +382,8 @@ function renderPatternEdit(id) {
     '<div class="wrap">' +
     '<div class="seg wide" id="tools"><button data-tool="move" class="on">✋ 선수 옮기기</button><button data-tool="ball">🏀 공 주기</button><button data-tool="screen">┳ 스크린</button></div>' +
     '<div class="pe-n"><span class="note">👥 선수 수</span><div class="seg">' + [1, 2, 3, 4, 5].map(function (n) { return '<button data-pn="' + n + '" class="' + ((p.n || 5) === n ? 'on' : '') + '">' + n + '명</button>' }).join('') + '</div></div>' +
+    '<div id="scrset"><div class="pe-n"><span class="note">┳ 스크린에 걸린 수비</span><div class="seg"><button data-sm="around">돌아서 늦게</button><button data-sm="stop">막혀서 멈춤</button><button data-sm="off">끄기</button></div></div>' +
+    '<label class="tgl" style="margin-top:6px"><input type="checkbox" id="autoscr"> 공격수가 수비 바로 앞에 서면 자동으로 스크린</label></div>' +
     '<p class="note" id="toolhelp" style="margin:6px 0"></p>' +
     '<div class="pe-zbar"><span class="note">코트 크기</span><div class="tj-zoom"><button class="btn" data-pz="-1" aria-label="작게">－</button><button class="btn sm" data-pz="0" id="pezl">100%</button><button class="btn" data-pz="1" aria-label="크게">＋</button></div></div>' +
     '<div class="court pe-wrap" id="pewrap">' + courtSvg('court', ' edit', isFull(p)) + '</div>' +
@@ -366,6 +431,8 @@ function renderPatternEdit(id) {
   $('#plv').onchange = function () { p.level = this.value; save(); peCheck() };
   on('pjw', function () { journalSheet(null, p.id) });
   $('#fnote').oninput = function () { p.frames[PE.i].note = this.value; save(); peCheck() };
+  $$('[data-sm]').forEach(function (b) { b.onclick = function () { p.screenMode = b.dataset.sm; save(); peDraw(); toast({ around: '스크린에 걸린 수비는 돌아서 가느라 늦어요', stop: '스크린에 걸린 수비는 그 자리에서 막혀요', off: '스크린이 있어도 수비가 그냥 지나가요' }[p.screenMode]) } });
+  $('#autoscr').onchange = function () { p.autoScreen = this.checked; save(); peDraw() };
   $$('[data-tool]').forEach(function (b) { b.onclick = function () { PE.tool = b.dataset.tool; $$('[data-tool]').forEach(function (x) { x.classList.toggle('on', x === b) }); peHelp() } });
   peWireCourt();
   $$('[data-pz]').forEach(function (b) { b.onclick = function () { peZoom(+b.dataset.pz) } });
@@ -373,14 +440,15 @@ function renderPatternEdit(id) {
 }
 function peHelp() {
   $('#toolhelp').textContent = {
-    move: '선수(파란 원·빨간 네모)를 손가락으로 끌어서 이 단계의 위치로 옮기세요. 앞 단계에서 움직인 길이 화살표로 그려져요.',
+    move: '선수(파란 원·빨간 네모)를 손가락으로 끌어서 이 단계의 위치로 옮기세요. 공격수를 다른 수비 바로 앞에 세우면 스크린이 되고, 그 수비는 스크린을 뚫지 못해요 (💥).',
     ball: '공을 받을 공격 선수를 누르세요. 앞 단계와 공 가진 사람이 다르면 패스(점선)로 그려져요.',
-    screen: '스크린을 거는 공격 선수를 누르세요. 다시 누르면 취소돼요.'
+    screen: '스크린을 거는 공격 선수를 누르세요. 다시 누르면 취소돼요. (자동 스크린이 켜져 있으면 공격수를 수비 바로 앞에 옮기기만 해도 스크린이 돼요)'
   }[PE.tool];
 }
 function peSave() { save() }
 function peDraw() {
   var p = PE.p, n = normPattern(p), i = PE.i;
+  var ss = $('#scrset'); if (ss) { ss.hidden = !(p.def === 'auto' || !p.def); $$('[data-sm]').forEach(function (b) { b.classList.toggle('on', b.dataset.sm === scrMode(p)) }); $('#autoscr').checked = autoScr(p); $('#autoscr').disabled = scrMode(p) === 'off' }
   $('#dyn').innerHTML = courtFrame(n, i, { showD: p.def !== 'none' });
   $('#frames').innerHTML = p.frames.map(function (f, j) { return '<button class="fchip' + (j === i ? ' on' : '') + '" data-fi="' + j + '">' + (j + 1) + '</button>' }).join('') +
     '<button class="fchip add" data-act="fadd">＋ 다음 단계</button>' + (p.frames.length > 1 ? '<button class="fchip del" data-act="fdel">이 단계 삭제</button>' : '');
