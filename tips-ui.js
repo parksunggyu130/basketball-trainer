@@ -1,6 +1,7 @@
 /* 실전 꿀팁 화면. index.html 의 공용 함수($, esc, S, save, drill, findPattern …)를 쓴다 */
 'use strict';
 var tview = { cat: '전체', lv: '전체' };
+var TIP_EMO = { '돌파': '⚡', '속공': '🚀', '미스매치': '⚖️', '픽앤롤': '🧱', '오프볼': '🔄', '수비': '🛡️', '리바운드': '🙌', '경기 운영': '🧠' };
 function libTabs(on) {
   return '<div class="seg wide" style="margin-bottom:6px"><button data-ltab="drill" class="' + (on === 'drill' ? 'on' : '') + '">🏀 기술 훈련</button><button data-ltab="tips" class="' + (on === 'tips' ? 'on' : '') + '">💡 실전 꿀팁</button></div>';
 }
@@ -17,9 +18,15 @@ function tipCard(t) {
 }
 function renderTipsList() {
   var items = TIPS.filter(function (t) { return (tview.cat === '전체' || t.cat === tview.cat) && (tview.lv === '전체' || t.level === tview.lv) });
+  if (tview.cat === '전체') {
+    $('#app').innerHTML = '<div class="top"><h1>농구 훈련</h1></div><div class="wrap">' + libTabs('tips') +
+      '<div class="tiles">' + TCATS.map(function (c) { var n = TIPS.filter(function (t) { return t.cat === c }).length; return '<button class="tile" data-tc="' + c + '"><span>' + (TIP_EMO[c] || '💡') + '</span><b>' + c + '</b><small>꿀팁 ' + n + '개</small></button>' }).join('') + '</div></div>';
+    $$('[data-tc]').forEach(function (b) { b.onclick = function () { tview.cat = b.dataset.tc; tview.lv = '전체'; renderTipsList() } });
+    return;
+  }
   $('#app').innerHTML = '<div class="top"><h1>농구 훈련</h1></div><div class="wrap">' + libTabs('tips') +
-    '<div class="chips">' + ['전체'].concat(TCATS).map(function (c) { return '<button class="chip' + (tview.cat === c ? ' on' : '') + '" data-tc="' + c + '">' + c + '</button>' }).join('') + '</div>' +
-    '<div class="chips" style="padding-top:0">' + ['전체', '초급', '중급', '고급'].map(function (c) { return '<button class="chip' + (tview.lv === c ? ' on' : '') + '" data-tl="' + c + '">' + (c === '전체' ? '모든 난이도' : c) + '</button>' }).join('') + '</div>' +
+    '<div class="cathead"><button class="btn sm" data-tc="전체">← 전체 상황</button><b>' + (TIP_EMO[tview.cat] || '') + ' ' + esc(tview.cat) + '</b></div>' +
+    '<div class="chips">' + ['전체', '초급', '중급', '고급'].map(function (c) { return '<button class="chip' + (tview.lv === c ? ' on' : '') + '" data-tl="' + c + '">' + (c === '전체' ? '모든 난이도' : c) + '</button>' }).join('') + '</div>' +
     (items.length ? '<div class="list">' + items.map(tipCard).join('') + '</div>' : '<div class="empty">맞는 꿀팁이 없어요</div>') + '</div>';
   $$('[data-tc]').forEach(function (b) { b.onclick = function () { tview.cat = b.dataset.tc; renderTipsList() } });
   $$('[data-tl]').forEach(function (b) { b.onclick = function () { tview.lv = b.dataset.tl; renderTipsList() } });

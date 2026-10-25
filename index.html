@@ -226,6 +226,43 @@ textarea:focus,.inp:focus{border-color:var(--acc)}
 .trem{background:var(--acc-soft);border-radius:14px;padding:12px 14px;margin-top:14px;font-size:17px;font-weight:700}
 .trem small{color:var(--acc)}
 a.chip{text-decoration:none;color:inherit}
+/* ---------- 쉬운 메뉴 ---------- */
+html,body{font-size:17px}
+.iconbtn{width:46px;height:46px;font-size:20px}
+.chip{padding:9px 16px;font-size:16px}
+.btn.sm{padding:9px 12px;font-size:15px}
+.seg button{padding:8px 12px;font-size:15px}
+.drill .nm{font-size:18px}
+.nav a{font-size:13px;font-weight:600;padding:8px 0 9px}
+.nav a b{font-size:25px}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+@media (min-width:640px){.tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.tile{border:1px solid var(--line);background:var(--card);border-radius:18px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:var(--shadow);min-height:118px;justify-content:center}
+.tile span{font-size:40px;line-height:1.1}
+.tile b{font-size:18px}
+.tile small{color:var(--sub);font-size:13px}
+.tile:active{transform:scale(.97)}
+.cathead{display:flex;align-items:center;gap:12px;margin-top:10px}
+.cathead b{font-size:20px}
+.row.basic{gap:8px}
+.row.basic .btn{flex:1;padding:13px 8px;font-size:16px}
+.row.basic .bigpp{flex:1.6}
+.row.basic .seg button{padding:11px 8px;font-size:16px}
+.advtgl{width:100%;margin-top:2px}
+.advbox{display:flex;flex-direction:column;gap:8px}
+.advbox[hidden]{display:none}
+.follow{width:100%;margin-top:16px;padding:15px;font-size:18px}
+.follow-ov{position:fixed;inset:0;z-index:65;background:var(--bg);display:flex;flex-direction:column;padding:calc(14px + env(safe-area-inset-top)) 18px calc(18px + env(safe-area-inset-bottom))}
+.fo-top{display:flex;align-items:center;gap:10px}
+.fo-top b{flex:1;font-size:19px}
+.fo-n{color:var(--acc);font-weight:900;font-size:22px;margin-top:18px}
+.fo-t{flex:1;font-size:27px;line-height:1.55;font-weight:700;margin-top:10px;overflow:auto}
+.fo-dots{display:flex;gap:6px;justify-content:center;margin:12px 0}
+.fo-dots i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.fo-dots i.on{background:var(--acc)}
+.fo-btns{display:flex;gap:10px}
+.fo-btns .btn{flex:1;padding:18px 8px;font-size:19px}
+.fo-btns .btn:disabled{opacity:.4}
 </style>
 </head>
 <body>
@@ -266,7 +303,7 @@ function openExternal(url){ if(isNative) location.href=url; else window.open(url
 var KEY='bbtrain.v1';
 var S=load();
 function load(){
-  var d={fav:{},media:{},marks:{},stepT:{},logs:[],custom:[],patterns:[],pnotes:{},mine:{},cref:{},pjournal:[],tnotes:{}};
+  var d={fav:{},media:{},marks:{},stepT:{},logs:[],custom:[],patterns:[],pnotes:{},mine:{},cref:{},pjournal:[],tnotes:{},ui:{},recent:[]};
   try{var o=JSON.parse(localStorage.getItem(KEY)||'{}');for(var k in d) if(o[k]) d[k]=o[k]}catch(e){}
   return d;
 }
@@ -371,7 +408,6 @@ function card(d){
     (S.media[d.id]?'<span class="tag vid">'+(S.media[d.id].type==='local'?'📱 내 영상':'▶ 영상')+'</span>':'')+(d.custom?'<span class="tag">내가 만든</span>':'')+'</div></a>';
 }
 function renderList(favOnly){
-  var cats=['전체'].concat(CATS);
   var all=allDrills().filter(function(d){return !favOnly||S.fav[d.id]});
   var favPats=favOnly?allPatterns().filter(function(p){return S.fav['p:'+p.id]}):[];
   var favTips=favOnly?TIPS.filter(function(t){return S.fav['t:'+t.id]}):[];
@@ -385,17 +421,23 @@ function renderList(favOnly){
   }).map(function(d,i){return [d,i]}).sort(function(a,b){
     return (CATS.indexOf(a[0].cat)-CATS.indexOf(b[0].cat))||(LV.indexOf(a[0].level)-LV.indexOf(b[0].level))||(a[1]-b[1]);
   }).map(function(x){return x[0]});
+  var tiles=!favOnly&&view.cat==='전체'&&!q;
+  var recent=(S.recent||[]).map(drill).filter(Boolean).slice(0,4);
   $('#app').innerHTML=
-    '<div class="top"><h1>'+(favOnly?'즐겨찾기':'농구 훈련')+'</h1>'+(favOnly?'':'<button class="iconbtn" data-act="add" aria-label="내 훈련 추가">＋</button>')+'</div>'+
-    '<div class="wrap">'+(favOnly?'':libTabs('drill'))+'<input class="search" id="q" placeholder="기술 이름 검색 (예: 레이업, crossover)" value="'+esc(view.q)+'">'+
-    '<div class="chips">'+cats.map(function(c){return '<button class="chip'+(view.cat===c?' on':'')+'" data-cat="'+c+'">'+c+'</button>'}).join('')+'</div>'+
-    '<div class="chips" style="padding-top:0">'+['전체','입문','초급','중급','고급'].map(function(c){return '<button class="chip'+(view.lv===c?' on':'')+'" data-lv="'+c+'">'+(c==='전체'?'모든 난이도':c)+'</button>'}).join('')+'</div>'+
+    '<div class="top"><h1>'+(favOnly?'즐겨찾기':'농구 훈련')+'</h1>'+(favOnly?'':'<button class="iconbtn" data-act="srch" aria-label="검색">🔍</button><button class="iconbtn" data-act="add" aria-label="내 훈련 추가">＋</button>')+'</div>'+
+    '<div class="wrap">'+(favOnly?'':libTabs('drill'))+
+    (!favOnly&&(view.srch||q)?'<input class="search" id="q" placeholder="기술 이름 검색 (예: 레이업, crossover)" value="'+esc(view.q)+'">':'')+
+    (tiles?'<div class="tiles">'+CATS.map(function(c){var n=all.filter(function(d){return d.cat===c}).length;return n?'<button class="tile" data-cat="'+c+'"><span>'+(CAT_EMO[c]||'🏀')+'</span><b>'+c+'</b><small>'+n+'개</small></button>':''}).join('')+'</div>'+
+      (recent.length?'<div class="sec"><h3>최근에 본 연습</h3><div class="list">'+recent.map(card).join('')+'</div></div>':'')+'</div>'
+    :(!favOnly&&view.cat!=='전체'?'<div class="cathead"><button class="btn sm" data-cat="전체">← 전체 분류</button><b>'+(CAT_EMO[view.cat]||'')+' '+esc(view.cat)+'</b></div>':'')+
+    (favOnly?'':'<div class="chips">'+['전체','입문','초급','중급','고급'].map(function(c){return '<button class="chip'+(view.lv===c?' on':'')+'" data-lv="'+c+'">'+(c==='전체'?'모든 난이도':c)+'</button>'}).join('')+'</div>')+
     (items.length?'<div class="list">'+items.map(card).join('')+'</div>':
       '<div class="empty">'+(favOnly&&!all.length?(favPats.length||favTips.length?'즐겨찾기한 훈련이 없어요':'훈련·꿀팁·패턴 화면에서 ☆ 를 누르면 여기에 모여요'):'맞는 훈련이 없어요')+'</div>')+
     (favOnly&&favTips.length?'<div class="sec"><h3>꿀팁</h3><div class="list">'+favTips.map(tipCard).join('')+'</div></div>':'')+
     (favOnly&&favPats.length?'<div class="sec"><h3>패턴</h3><div class="list">'+favPats.map(patternCard).join('')+'</div></div>':'')+
-    '</div>';
-  $('#q').addEventListener('input',function(e){view.q=e.target.value;var pos=e.target.selectionStart;renderList(favOnly);var n=$('#q');n.focus();n.setSelectionRange(pos,pos)});
+    '</div>');
+  var sb=$('[data-act=srch]');if(sb) sb.onclick=function(){view.srch=!view.srch;if(!view.srch) view.q='';renderList(favOnly);var n=$('#q');if(n) n.focus()};
+  if($('#q')) $('#q').addEventListener('input',function(e){view.q=e.target.value;var pos=e.target.selectionStart;renderList(favOnly);var n=$('#q');n.focus();n.setSelectionRange(pos,pos)});
   $$('[data-cat]').forEach(function(b){b.onclick=function(){view.cat=b.dataset.cat;renderList(favOnly)}});
   $$('[data-lv]').forEach(function(b){b.onclick=function(){view.lv=b.dataset.lv;renderList(favOnly)}});
   var add=$('[data-act=add]');if(add) add.onclick=function(){editDrillSheet(null)};
@@ -405,6 +447,7 @@ function renderList(favOnly){
 var D=null, loopA=null, loopB=null, loopOn=false, rateV=1, mirror=false, reps=0, sets=0, doneSteps={}, checked={}, startedAt=0;
 function renderDrill(id){
   D=drill(id); if(!D){location.hash='#/';return}
+  S.recent=[id].concat((S.recent||[]).filter(function(x){return x!==id})).slice(0,8);save();
   loopA=loopB=null;loopOn=false;rateV=1;mirror=false;reps=0;sets=0;doneSteps={};checked={};startedAt=Date.now();
   var st=S.stepT[D.id]||{};
   $('#app').innerHTML=
@@ -417,6 +460,7 @@ function renderDrill(id){
     '<div id="pbox"></div><div id="ctrl"></div>'+
     '<div class="meta"><div><small>난이도</small><span>'+esc(D.level)+'</span></div><div><small>준비물</small><span>'+esc(D.equip||'-')+'</span></div><div><small>시간</small><span>'+esc(D.time||'-')+'</span></div></div>'+
     (D.reps?'<div class="tip"><b>권장 훈련량</b> · '+esc(D.reps)+'</div>':'')+
+    '<button class="btn pri follow" data-act="follow">👀 한 단계씩 따라하기</button>'+
     '<div class="sec"><h3>단계별 동작</h3><ol class="steps">'+D.steps.map(function(s,i){
       return '<li data-i="'+i+'"><button class="num" data-step="'+i+'">'+(i+1)+'</button><div class="tx">'+esc(s)+
         '<div class="tt"><button class="tchip'+(st[i]!=null?' set':'')+'" data-goto="'+i+'">'+(st[i]!=null?'▶ '+fmt(st[i]):'⏱ 영상 위치 연결')+'</button></div></div></li>'}).join('')+'</ol>'+
@@ -472,14 +516,19 @@ function renderPlayer(){
 function drawCtrl(){
   var local=P&&P.kind==='local';
   var marks=S.marks[D.id]||[];
+  var adv=!!(S.ui&&S.ui.adv);
   $('#ctrl').innerHTML='<div class="ctrl">'+
+    '<div class="row basic"><button class="btn" data-jump="-5">−5초</button><button class="btn pri bigpp" data-act="pp">▶ 재생 / ❚❚</button><button class="btn" data-jump="5">+5초</button></div>'+
+    '<div class="row basic"><div class="seg wide"><button data-rate="0.5" class="'+(rateV===0.5?'on':'')+'">🐢 느리게</button><button data-rate="1" class="'+(rateV===1?'on':'')+'">보통 속도</button></div></div>'+
+    '<button class="btn sm ghost advtgl" data-act="adv">'+(adv?'🛠 도구 접기 ▴':'🛠 도구 더보기 (프레임·구간반복·장면 표시) ▾')+'</button>'+
+    '<div class="advbox"'+(adv?'':' hidden')+'>'+
     '<div class="row"><span class="lbl">속도</span><div class="seg" id="rate">'+[0.25,0.5,0.75,1].map(function(r){return '<button data-rate="'+r+'" class="'+(rateV===r?'on':'')+'">'+(r===1?'보통':r+'x')+'</button>'}).join('')+'</div>'+
       '<button class="btn sm ghost" data-act="mirror" title="좌우 반전 (왼손잡이)">⇋ 반전</button></div>'+
-    '<div class="row"><span class="lbl">이동</span><button class="btn sm" data-jump="-5">−5초</button><button class="btn sm" data-jump="'+(local?-1/30:-0.2)+'">◂ '+(local?'1프레임':'0.2초')+'</button><button class="btn sm pri" data-act="pp">▶❚❚</button><button class="btn sm" data-jump="'+(local?1/30:0.2)+'">'+(local?'1프레임':'0.2초')+' ▸</button><button class="btn sm" data-jump="5">+5초</button></div>'+
+    '<div class="row"><span class="lbl">이동</span><button class="btn sm" data-jump="-5">−5초</button><button class="btn sm" data-jump="'+(local?-1/30:-0.2)+'">◂ '+(local?'1프레임':'0.2초')+'</button><button class="btn sm" data-act="pp2">▶❚❚</button><button class="btn sm" data-jump="'+(local?1/30:0.2)+'">'+(local?'1프레임':'0.2초')+' ▸</button><button class="btn sm" data-jump="5">+5초</button></div>'+
     '<div class="row"><span class="lbl">반복</span><button class="btn sm ab'+(loopA!=null?' on':'')+'" data-act="setA">A '+(loopA!=null?fmt(loopA):'시작')+'</button><button class="btn sm ab'+(loopB!=null?' on':'')+'" data-act="setB">B '+(loopB!=null?fmt(loopB):'끝')+'</button>'+
       '<button class="btn sm'+(loopOn?' pri':'')+'" data-act="loop">🔁 '+(loopOn?'구간반복 중':'구간반복')+'</button>'+((loopA!=null||loopB!=null)?'<button class="btn sm ghost" data-act="clrAB">지우기</button>':'')+'<span class="time" id="tm">0:00.0</span></div>'+
     '<div class="row"><span class="lbl">표시</span><div class="marks">'+marks.map(function(k,i){return '<button class="mark" data-mark="'+i+'"><b>'+fmt(k.t)+'</b>'+esc(k.label)+'</button>'}).join('')+'<button class="mark" data-act="addmark" style="border-style:dashed">＋ 지금 위치 표시</button></div></div>'+
-    '</div>';
+    '</div></div>';
   wireCtrl();
   if(P){clearInterval(P.tick);P.rateV=rateV;P.tick=setInterval(function(){
     var t=P.time(),e=$('#tm');if(e) e.textContent=fmt(t);
@@ -487,10 +536,12 @@ function drawCtrl(){
   },80)}
 }
 function wireCtrl(){
-  $$('[data-rate]').forEach(function(b){b.onclick=function(){rateV=+b.dataset.rate;if(P){P.rate(rateV);P.rateV=rateV}$$('[data-rate]').forEach(function(x){x.classList.toggle('on',x===b)})}});
+  $$('[data-rate]').forEach(function(b){b.onclick=function(){rateV=+b.dataset.rate;if(P){P.rate(rateV);P.rateV=rateV}$$('[data-rate]').forEach(function(x){x.classList.toggle('on',+x.dataset.rate===rateV)})}});
   $$('[data-jump]').forEach(function(b){b.onclick=function(){if(!P) return;var j=+b.dataset.jump;if(Math.abs(j)<1) P.pause();P.seek(P.time()+j)}});
   var on=function(a,f){var b=$('[data-act='+a+']',$('#ctrl'));if(b) b.onclick=f};
   on('pp',function(){P&&(P.paused()?P.play():P.pause())});
+  on('pp2',function(){P&&(P.paused()?P.play():P.pause())});
+  on('adv',function(){S.ui=S.ui||{};S.ui.adv=!S.ui.adv;save();drawCtrl()});
   on('mirror',function(){mirror=!mirror;var p=$('#pl');p&&p.classList.toggle('mirror',mirror)});
   on('setA',function(){if(!P) return;loopA=P.time();if(loopB!=null&&loopB<=loopA) loopB=null;drawCtrl()});
   on('setB',function(){if(!P) return;var t=P.time();if(loopA==null||t<=loopA){toast('A(시작)를 먼저, B는 그 뒤에 찍어주세요');return}loopB=t;loopOn=true;P.seek(loopA);P.play();drawCtrl()});
@@ -526,6 +577,7 @@ function wireDrill(){
   $$('[data-tset]').forEach(function(b){b.onclick=function(){stopTimer();tLen=+b.dataset.tset;$('#tnum').textContent=fmtS(tLen);$('#tst').textContent='대기'}});
   on('tgo',function(){tEnd?stopTimer(true):startTimer()});
   on('finish',finishSheet);
+  on('follow',followSteps);
 }
 
 /* 영상 버튼은 다시 그려지므로 한 번만 위임 */
@@ -539,6 +591,22 @@ document.addEventListener('click',function(e){
     else if(a==='rmvid') confirmSheet('이 훈련에서 영상을 뺄까요?',function(){var m=S.media[D.id];if(m&&m.type==='local') vdb.del(D.id);delete S.media[D.id];save();renderPlayer()});
     else if(a==='ytapp'){var m=S.media[D.id];m&&openExternal('https://www.youtube.com/watch?v='+m.id+'&t='+Math.floor(m.start||0)+'s')}
   });
+
+/* ---------- 한 단계씩 따라하기 (큰 글씨 전체 화면) ---------- */
+var CAT_EMO={'드리블':'🏀','슈팅':'🎯','레이업':'🏃','패스':'🤝','풋워크':'👟','수비':'🛡️','포스트':'💪','리바운드':'🙌'};
+function followSteps(){
+  var d=D,i=0,o=document.createElement('div');o.className='follow-ov';
+  function draw(){
+    o.innerHTML='<div class="fo-top"><b>'+esc(d.name)+'</b><button class="iconbtn" data-fo="x" aria-label="닫기">✕</button></div>'+
+      '<div class="fo-n">'+(i+1)+' / '+d.steps.length+'</div><div class="fo-t">'+esc(d.steps[i])+'</div>'+
+      '<div class="fo-dots">'+d.steps.map(function(_,j){return '<i class="'+(j===i?'on':'')+'"></i>'}).join('')+'</div>'+
+      '<div class="fo-btns"><button class="btn" data-fo="p"'+(i?'':' disabled')+'>◀ 이전</button><button class="btn pri" data-fo="n">'+(i<d.steps.length-1?'다음 ▶':'끝! 연습하러 가기 💪')+'</button></div>';
+  }
+  o.addEventListener('click',function(e){var b=e.target.closest('[data-fo]');if(!b) return;var a=b.dataset.fo;
+    if(a==='x'||(a==='n'&&i===d.steps.length-1)){o.remove();sheetClose=null;if(a==='n'){var t=$('.train');t&&t.scrollIntoView({behavior:'smooth',block:'center'})}return}
+    if(a==='p'&&i>0) i--; if(a==='n') i++; draw()});
+  draw();document.body.appendChild(o);sheetClose=function(){o.remove();sheetClose=null};
+}
 
 /* ---------- 타이머 ---------- */
 var tLen=30,tEnd=0,tInt=null,actx=null;
