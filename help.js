@@ -101,7 +101,7 @@ var HELP = [
     id: 'faq', emo: '🙋', title: '자주 묻는 질문',
     items: [
       ['영상이 안 나와요', '<ol><li><b>인터넷</b>이 켜져 있는지 봐요. (와이파이·데이터)</li><li>"여기서는 재생이 안 되는 영상"이 나오면 <b>유튜브에서 열기</b>를 눌러요.</li><li>농구장처럼 인터넷이 없는 곳에서는 미리 <b>📱 내 폰 영상</b>을 넣어 두어요.</li></ol>'],
-      ['새 기능이 안 보여요', '🍎 아이폰: 앱을 완전히 닫고 <b>두 번</b> 다시 열어요.<br>📱 안드로이드: 새 apk 파일을 다시 설치해요.'],
+      ['새 기능이 안 보여요', '<b>제일 쉬운 방법</b>: 👉 <b>❓ 도움말</b> 맨 위 <b>🔄 최신 버전 받기</b>를 눌러요. (기록은 지워지지 않아요)<br><br>그 버튼이 없는 예전 버전이라면:<br>🍎 아이폰 / 네이버·크롬 바로가기: 앱을 <b>완전히 닫고 두 번</b> 다시 열어요.<br>또는 인터넷 창에서 <b>parksunggyu130.github.io/basketball-trainer/?reset</b> 을 열어요.<br>📱 안드로이드 앱(apk): 새 apk 파일을 다시 설치해요.'],
       ['새 코치님 영상은 언제 들어와요?', '김재현·고민기 코치님 영상은 <b>매일 아침</b> 저절로 들어와요. 인터넷이 켜진 상태로 앱을 열면 보여요. (아이폰은 두 번 열기)'],
       ['🦴 뼈대가 안 나와요', '처음 한 번은 인터넷이 필요해요. 영상에 <b>한 사람만</b>, <b>온몸이 다</b> 나와야 잘 돼요.'],
       ['내 영상이 저장이 안 돼요', '영상이 너무 길거나 크면 안 돼요. <b>1분 안쪽</b>으로 찍어요.'],
@@ -114,11 +114,14 @@ function renderHelp(sec) {
   if (sec) hview.open = sec;
   $('#app').innerHTML = '<div class="top"><h1>❓ 도움말</h1></div><div class="wrap">' +
     '<div class="tip">궁금한 것을 누르면 설명이 나와요. 처음이라면 <b>🚀 처음 시작하기</b>부터 봐요.</div>' +
+    (isNative ? '' : '<div class="card" style="padding:12px;margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="flex:1;min-width:150px">새 기능이 안 보이면 👉<br><small class="note" id="appver" style="margin:0"></small></span><button class="btn pri" data-act="fupd">🔄 최신 버전 받기</button></div>') +
     '<div class="tiles" style="margin-top:12px">' + HELP.map(function (h) { return '<button class="tile' + (hview.open === h.id ? ' on' : '') + '" data-hs="' + h.id + '"><span>' + h.emo + '</span><b>' + h.title + '</b><small>' + h.items.length + '개</small></button>' }).join('') + '</div>' +
     HELP.map(function (h) {
       return '<div class="sec hsec" id="h-' + h.id + '"' + (hview.open === h.id ? '' : ' hidden') + '><h3>' + h.emo + ' ' + h.title + '</h3>' +
         h.items.map(function (it, i) { return '<details class="hq"' + (i === 0 ? ' open' : '') + '><summary>' + it[0] + '</summary><div>' + it[1] + '</div></details>' }).join('') + '</div>';
     }).join('') + '<div style="height:20px"></div></div>';
+  var fu = $('[data-act=fupd]'); if (fu) fu.onclick = forceUpdate;
+  if (window.caches && $('#appver')) caches.keys().then(function (ks) { var v = ks.filter(function (k) { return /^bbtrain-v\d+$/.test(k) })[0]; $('#appver').textContent = v ? '지금 버전: ' + v.replace('bbtrain-', '') : '' }).catch(function () {});
   $$('[data-hs]').forEach(function (b) {
     b.onclick = function () {
       hview.open = hview.open === b.dataset.hs ? null : b.dataset.hs;
