@@ -172,12 +172,23 @@ function patternCard(p) {
     '<div class="sm">' + esc(p.summary || '') + '</div>' +
     '<div class="row"><span class="tag">' + esc(p.cat) + '</span>' + (p.level ? '<span class="tag lv-' + esc(p.level) + '">' + esc(p.level) + '</span>' : '') + '<span class="tag">' + p.frames.length + '단계</span>' + (p.custom ? '<span class="tag vid">내 패턴</span>' : '') + masteryTag(p.id) + '</div></div></a>';
 }
+var PCAT_EMO = { '공격 기본': '🏀', '세트 오펜스': '🧩', '속공': '🚀', '프레스 브레이크': '🧨', '수비': '🛡️', '인바운드': '📥', '내 패턴': '✏️' };
 function renderPatternList() {
-  var cats = ['전체', '내 패턴'].concat(PCATS);
+  if (pview.cat === '전체') {
+    var cats = PCATS.concat(['내 패턴']);
+    $('#app').innerHTML = '<div class="top"><h1>패턴</h1></div><div class="wrap">' + patTabs('list') +
+      '<div class="tiles">' + cats.map(function (c) {
+        var n = allPatterns().filter(function (p) { return c === '내 패턴' ? p.custom : p.cat === c }).length;
+        return '<button class="tile" data-pcat="' + c + '"><span>' + (PCAT_EMO[c] || '📋') + '</span><b>' + c + '</b><small>' + n + '개</small></button>';
+      }).join('') + '</div>' +
+      '<button class="btn pri follow" data-act="newpat">✏️ 배운 패턴 새로 그리기</button></div>';
+    $$('[data-pcat]').forEach(function (b) { b.onclick = function () { pview.cat = b.dataset.pcat; renderPatternList() } });
+    $('[data-act=newpat]').onclick = newPattern;
+    return;
+  }
   var items = allPatterns().filter(function (p) { return pview.cat === '전체' || (pview.cat === '내 패턴' ? p.custom : p.cat === pview.cat) });
   $('#app').innerHTML = '<div class="top"><h1>패턴</h1><button class="iconbtn" data-act="newpat" aria-label="새 패턴 그리기">＋</button></div><div class="wrap">' + patTabs('list') +
-    '<div class="tip">코트 위에서 <b>공격·수비·공</b>이 어떻게 움직이는지 단계별로 보고, 배운 패턴은 <b>＋</b>로 직접 그려서 저장하세요.</div>' +
-    '<div class="chips">' + cats.map(function (c) { return '<button class="chip' + (pview.cat === c ? ' on' : '') + '" data-pcat="' + c + '">' + c + '</button>' }).join('') + '</div>' +
+    '<div class="cathead"><button class="btn sm" data-pcat="전체">← 전체 분류</button><b>' + (PCAT_EMO[pview.cat] || '') + ' ' + esc(pview.cat) + '</b></div><div style="height:10px"></div>' +
     (items.length ? '<div class="list">' + items.map(patternCard).join('') + '</div>' : '<div class="empty">' + (pview.cat === '내 패턴' ? '오른쪽 위 ＋ 를 눌러 배운 패턴을 그려보세요' : '패턴이 없어요') + '</div>') + '</div>';
   $$('[data-pcat]').forEach(function (b) { b.onclick = function () { pview.cat = b.dataset.pcat; renderPatternList() } });
   $('[data-act=newpat]').onclick = newPattern;
@@ -195,11 +206,12 @@ function renderPatternView(id) {
     '<button class="iconbtn" data-act="pfav" aria-label="즐겨찾기">' + (S.fav['p:' + p.id] ? '★' : '☆') + '</button>' +
     (p.custom ? '<button class="iconbtn" data-act="pedit" aria-label="고치기">✎</button>' : '<button class="iconbtn" data-act="pcopy" title="복사해서 내 패턴으로">⧉</button>') + '</div>' +
     '<div class="wrap"><div class="hero"><h2>' + esc(p.name) + ' ' + masteryTag(p.id) + '</h2>' + (p.en ? '<div class="en">' + esc(p.en) + '</div>' : '') + (p.summary ? '<p>' + esc(p.summary) + '</p>' : '') + '</div>' +
-    '<div class="court">' + courtSvg('court', '', isFull(p)) + '</div>' + legendHtml(PV.showD) +
-    '<div class="pctl"><button class="btn sm" data-act="pfirst" aria-label="처음">⏮</button><button class="btn sm" data-act="pprev">◀ 이전</button>' +
-    '<span class="pstep" id="pstep"></span><button class="btn sm" data-act="pnext">다음 ▶</button><button class="btn sm pri" data-act="pplay" id="pplay">▶ 전체 재생</button></div>' +
-    (p.def !== 'none' ? '<label class="tgl"><input type="checkbox" id="showD" checked> 수비 보이기</label>' : '') +
+    '<div class="court tapnext">' + courtSvg('court', '', isFull(p)) + '</div>' +
     '<div class="pnote" id="pnote"></div>' +
+    '<div class="pctl2"><button class="btn" data-act="pprev">◀ 이전</button><span class="pstep" id="pstep"></span><button class="btn pri" data-act="pnext">다음 ▶</button></div>' +
+    '<button class="btn pplay" data-act="pplay" id="pplay">▶ 처음부터 움직임 보기</button>' +
+    '<p class="note" style="text-align:center;margin:6px 0 0">코트 그림을 눌러도 다음 단계로 넘어가요</p>' + legendHtml(PV.showD) +
+    (p.def !== 'none' ? '<label class="tgl"><input type="checkbox" id="showD" checked> 수비(빨간 네모) 보이기</label>' : '') +
     '<div class="sec"><h3>단계별 움직임</h3><ol class="steps" id="psteps">' + n.frames.map(function (f, i) { return '<li data-pi="' + i + '"><span class="num">' + (i + 1) + '</span><div class="tx">' + esc(f.note || '(설명 없음)') + '</div></li>' }).join('') + '</ol></div>' +
     (p.keys && p.keys.length ? '<div class="sec"><h3>핵심 포인트</h3><div class="checks">' + p.keys.map(function (k) { return '<label><span>✓</span><span>' + esc(k) + '</span></label>' }).join('') + '</div></div>' : '') +
     '<div class="sec"><h3>📓 내 일지 <button class="btn sm pri" data-act="pjw" style="margin-left:auto">＋ 일지 쓰기</button></h3><div class="jlist">' + (journalOf(p.id).map(journalCard).join('') || '<p class="note" style="margin:0">아직 이 패턴 일지가 없어요. 배운 날 적어두면 복습할 때 좋아요.</p>') + '</div></div>' +
@@ -212,8 +224,9 @@ function renderPatternView(id) {
   on('pcopy', function () { var c = copyToCustom(p); location.hash = '#/pe/' + encodeURIComponent(c.id); toast('내 패턴으로 복사했어요. 자유롭게 고치세요') });
   on('pfirst', function () { pvStop(); PV.i = 0; pvDraw() });
   on('pprev', function () { pvStop(); if (PV.i > 0) { PV.i--; pvDraw() } });
-  on('pnext', function () { pvStop(); pvNext() });
+  on('pnext', function () { pvStop(); if (PV.i >= PV.n.frames.length - 1) { PV.i = 0; pvDraw() } else pvNext() });
   on('pplay', function () { PV.playing ? pvStop() : pvPlay() });
+  $('#court').addEventListener('click', function () { if (PV.playing) return; stopAnim(); if (PV.i >= PV.n.frames.length - 1) { PV.i = 0; pvDraw() } else pvNext() });
   var sd = $('#showD'); if (sd) sd.onchange = function () { PV.showD = sd.checked; pvDraw() };
   $$('[data-pi]').forEach(function (li) { li.onclick = function () { pvStop(); PV.i = +li.dataset.pi; pvDraw(); $('#court').scrollIntoView({ behavior: 'smooth', block: 'center' }) } });
   $('#pmemo').oninput = function () { S.pnotes[p.id] = this.value; save() };
@@ -226,6 +239,8 @@ function pvDraw() {
   var n = PV.n, i = PV.i;
   $('#dyn').innerHTML = courtFrame(n, i, { showD: PV.showD });
   $('#pstep').textContent = (i + 1) + ' / ' + n.frames.length;
+  var pb = $('[data-act=pprev]'); if (pb) pb.disabled = i === 0;
+  var nb = $('[data-act=pnext]'); if (nb) nb.textContent = i >= n.frames.length - 1 ? '처음으로 ↺' : '다음 ▶';
   $('#pnote').innerHTML = '<b>' + (i + 1) + '단계</b> ' + esc(n.frames[i].note || '');
   $$('#psteps li').forEach(function (li) { li.classList.toggle('cur', +li.dataset.pi === i) });
 }
@@ -235,7 +250,7 @@ function pvNext(cb) {
   animate(PV.n, PV.i + 1, PV.showD, function () { PV.i++; pvDraw(); cb && cb() });
 }
 function pvPlay() {
-  PV.playing = true; $('#pplay').textContent = '❚❚ 멈춤';
+  PV.playing = true; $('#pplay').textContent = '❚❚ 멈추기';
   PV.i = 0; pvDraw();
   (function step() {
     PV.timer = setTimeout(function () {
@@ -247,7 +262,7 @@ function pvPlay() {
 function pvStop() {
   if (!PV) return;
   PV.playing = false; clearTimeout(PV.timer); stopAnim();
-  var b = $('#pplay'); if (b) b.textContent = '▶ 전체 재생';
+  var b = $('#pplay'); if (b) b.textContent = '▶ 처음부터 움직임 보기';
   if ($('#dyn')) pvDraw();
 }
 
