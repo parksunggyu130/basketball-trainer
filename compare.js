@@ -46,20 +46,27 @@ function renderCompare(id) {
   $('#app').innerHTML =
     '<div class="top"><button class="iconbtn" data-act="back" aria-label="뒤로">←</button><h1 style="font-size:17px">내 영상 비교</h1></div>' +
     '<div class="wrap"><div class="hero"><h2>' + esc(d.name) + '</h2></div>' +
-    '<div class="srcs"><div class="src card"><div><b>기준 영상</b><small id="refname"></small></div><button class="btn sm" data-act="pickref">📱 고르기</button></div>' +
-    '<div class="src card"><div style="flex:1;min-width:0"><b>내 영상</b><select class="inp" id="myclip" style="margin-top:4px;padding:6px 8px"></select></div><button class="btn sm pri" data-act="pickmy">📹 새 영상</button><button class="iconbtn" data-act="delmy" aria-label="이 영상 삭제" style="width:36px;height:36px;font-size:15px">🗑</button></div></div>' +
-    '<div class="seg wide" style="margin-top:10px"><button data-cm="stack" class="on">위아래</button><button data-cm="side">양옆</button><button data-cm="over">겹치기</button></div>' +
-    '<div class="stage stack" id="stage">' + paneHtml('pref', '기준') + paneHtml('pmy', '나') + '</div>' +
-    '<div class="row ovl" id="ovl" hidden><span class="note">기준 영상 진하기</span><input type="range" id="op" min="0" max="100" value="50" style="flex:1"></div>' +
-    '<div class="ctrl">' +
-      '<div class="row"><span class="lbl">조작</span><div class="seg" id="tgt"><button data-tg="both" class="on">둘 다</button><button data-tg="ref">기준만</button><button data-tg="my">나만</button></div><button class="btn sm' + '" data-act="skel" id="skelbtn">🦴 뼈대·각도</button></div>' +
-      '<input type="range" id="scrub" min="0" max="1000" value="0" class="scrub" aria-label="재생 위치">' +
-      '<div class="row"><button class="btn sm" data-cj="-1">−1초</button><button class="btn sm" data-cj="-0.0333">◂ 1프레임</button><button class="btn sm pri" data-act="cpp" style="min-width:58px">▶</button><button class="btn sm" data-cj="0.0333">1프레임 ▸</button><button class="btn sm" data-cj="1">+1초</button></div>' +
-      '<div class="row"><span class="lbl">속도</span><div class="seg">' + [0.25, 0.5, 1].map(function (r) { return '<button data-cr="' + r + '" class="' + (r === 1 ? 'on' : '') + '">' + (r === 1 ? '보통' : r + 'x') + '</button>' }).join('') + '</div><span class="time" id="ctm"></span></div>' +
-      '<div class="row"><button class="btn sm" data-act="link" id="linkbtn">🔗 이 장면으로 맞추기</button><span class="note" id="linkst"></span></div>' +
+    '<div class="srcs"><div class="src card"><span class="srcn">①</span><div><b>잘하는 사람 영상</b><small id="refname"></small></div><button class="btn sm" data-act="pickref">📱 고르기</button></div>' +
+    '<div class="src card"><span class="srcn">②</span><div style="flex:1;min-width:0"><b>내 영상</b><select class="inp" id="myclip" style="margin-top:4px;padding:6px 8px"></select></div><button class="btn sm pri" data-act="pickmy">📹 찍기</button><button class="iconbtn" data-act="delmy" aria-label="이 영상 삭제" style="width:40px;height:40px;font-size:16px">🗑</button></div></div>' +
+    '<div class="seg wide cmode" style="margin-top:10px"><button data-cm="stack" class="on">⬆⬇ 위아래</button><button data-cm="side">⬅➡ 양옆</button><button data-cm="over">🔲 겹치기</button></div>' +
+    '<div class="stage stack" id="stage">' + paneHtml('pref', '잘하는 사람') + paneHtml('pmy', '내 영상') + '</div>' +
+    '<div class="row ovl" id="ovl" hidden><span class="note">잘하는 사람 영상 진하기</span><input type="range" id="op" min="0" max="100" value="50" style="flex:1"></div>' +
+    '<div class="cguide" id="cguide" hidden></div>' +
+    '<div class="ctrl" id="cctrl">' +
+      '<div class="row basic"><button class="btn" data-cj="-1">−1초</button><button class="btn pri bigpp" data-act="cpp">▶ 같이 재생</button><button class="btn" data-cj="1">+1초</button></div>' +
+      '<div class="row basic"><div class="seg wide"><button data-cr="0.5">🐢 느리게</button><button data-cr="1" class="on">보통 속도</button></div></div>' +
+      '<div class="row basic"><button class="btn" data-act="guide">🔗 같은 순간 맞추기</button><button class="btn" data-act="skel" id="skelbtn">🦴 뼈대 보기</button></div>' +
+      '<p class="note cst" id="linkst"></p>' +
+      '<button class="btn sm ghost advtgl" data-act="cadv">' + (S.ui && S.ui.cadv ? '🛠 도구 접기 ▴' : '🛠 도구 더보기 (한쪽만 움직이기·프레임·위치) ▾') + '</button>' +
+      '<div class="advbox"' + (S.ui && S.ui.cadv ? '' : ' hidden') + '>' +
+        '<div class="row"><span class="lbl">조작</span><div class="seg" id="tgt"><button data-tg="both" class="on">둘 다</button><button data-tg="ref">잘하는 사람만</button><button data-tg="my">내 영상만</button></div></div>' +
+        '<input type="range" id="scrub" min="0" max="1000" value="0" class="scrub" aria-label="재생 위치">' +
+        '<div class="row"><button class="btn sm" data-cj="-0.0333">◂ 1프레임</button><button class="btn sm" data-cj="0.0333">1프레임 ▸</button><button class="btn sm" data-cr="0.25">0.25x</button><span class="time" id="ctm"></span></div>' +
+        '<div class="row"><button class="btn sm" data-act="link" id="linkbtn">🔗 지금 장면으로 바로 맞추기</button></div>' +
+      '</div>' +
     '</div>' +
     '<div id="angles"></div>' +
-    '<div class="tip" style="margin-top:12px"><b>맞추는 법</b> · <b>기준만</b>을 골라 기준 영상을 핵심 순간(예: 공 놓는 순간)에 멈추고, <b>나만</b>을 골라 내 영상도 같은 순간에 멈춘 뒤 <b>🔗 맞추기</b>를 누르세요. 그다음 <b>둘 다</b>로 재생하면 같은 타이밍으로 움직여요.</div>' +
+    '<div class="tip" style="margin-top:12px"><b>이렇게 해요</b> · ① 잘하는 사람 영상 고르기 → ② 내 영상 찍기 → ③ <b>🔗 같은 순간 맞추기</b>를 누르고 안내대로 두 영상을 같은 순간에 멈추기 → <b>▶ 같이 재생</b>!</div>' +
     (d.checks && d.checks.length ? '<div class="sec"><h3>이걸 비교해 보세요</h3><div class="checks">' + d.checks.map(function (c) { return '<label><input type="checkbox"><span>' + esc(c) + '</span></label>' }).join('') + '</div></div>' : '') +
     '<div class="sec"><h3>비교 메모</h3><textarea id="cmemo" rows="3" placeholder="다른 점, 고칠 점을 적어두세요 (이 영상에 저장돼요)"></textarea></div>' +
     '<div class="sec" style="margin-bottom:24px"><h3>촬영 팁</h3><div class="mist">' +
@@ -152,6 +159,11 @@ function wireCompare() {
     else if (a === 'cpp') togglePlay();
     else if (a === 'link') setLink();
     else if (a === 'skel') toggleSkel();
+    else if (a === 'guide') startGuide();
+    else if (a === 'gpp') togglePlay();
+    else if (a === 'gnext') guideNext();
+    else if (a === 'gcancel') endGuide();
+    else if (a === 'cadv') { S.ui = S.ui || {}; S.ui.cadv = !S.ui.cadv; save(); $('.advbox', $('#cctrl')).hidden = !S.ui.cadv; b.textContent = S.ui.cadv ? '🛠 도구 접기 ▴' : '🛠 도구 더보기 (한쪽만 움직이기·프레임·위치) ▾' }
   };
   $('#myclip').onchange = function () { selectClip(this.value) };
   $('#cmemo').oninput = function () { if (C.clip) { C.clip.memo = this.value; save() } };
@@ -163,7 +175,7 @@ function wireCompare() {
   $('#op').oninput = applyOpacity;
   $$('[data-mir]').forEach(function (b) { b.onclick = function () { var p = b.dataset.mir === 'pref' ? C.ref : C.my; p.mirror = !p.mirror; p.v.style.transform = p.mirror ? 'scaleX(-1)' : ''; drawPoseFor(p) } });
   $$('[data-tg]').forEach(function (b) { b.onclick = function () { C.target = b.dataset.tg; $$('[data-tg]').forEach(function (x) { x.classList.toggle('on', x === b) }) } });
-  $$('[data-cr]').forEach(function (b) { b.onclick = function () { C.rate = +b.dataset.cr; [C.ref, C.my].forEach(function (p) { p.v.playbackRate = C.rate }); $$('[data-cr]').forEach(function (x) { x.classList.toggle('on', x === b) }) } });
+  $$('[data-cr]').forEach(function (b) { b.onclick = function () { C.rate = +b.dataset.cr; [C.ref, C.my].forEach(function (p) { p.v.playbackRate = C.rate }); $$('[data-cr]').forEach(function (x) { x.classList.toggle('on', +x.dataset.cr === C.rate) }) } });
   $$('[data-cj]').forEach(function (b) { b.onclick = function () { var dt = +b.dataset.cj; if (Math.abs(dt) < 1) pauseAll(); seekBy(dt) } });
   var sc = $('#scrub');
   sc.oninput = function () {
@@ -204,8 +216,8 @@ function setLink() {
 }
 function linkStatus() {
   var b = $('#linkbtn'), st = $('#linkst'); if (!b) return;
-  if (C.linked) { b.textContent = '🔗 맞춤 풀기'; b.dataset.on = '1'; b.classList.add('pri'); st.textContent = '기준이 ' + (C.offset >= 0 ? C.offset.toFixed(2) + '초 앞' : (-C.offset).toFixed(2) + '초 뒤') }
-  else { b.textContent = '🔗 이 장면으로 맞추기'; delete b.dataset.on; b.classList.remove('pri'); st.textContent = '아직 안 맞춤' }
+  if (C.linked) { b.textContent = '🔗 맞춤 풀기'; b.dataset.on = '1'; b.classList.add('pri'); st.innerHTML = '✅ 두 영상이 맞춰져 있어요 — <b>▶ 같이 재생</b>을 눌러 보세요' }
+  else { b.textContent = '🔗 지금 장면으로 바로 맞추기'; delete b.dataset.on; b.classList.remove('pri'); st.innerHTML = '아직 안 맞췄어요 — <b>🔗 같은 순간 맞추기</b>를 눌러요' }
 }
 
 /* 시간 표시, 스크럽, 동기화 유지, 뼈대 검출 */
@@ -216,7 +228,10 @@ function loop() {
   $('#ctm').textContent = (ready(C.ref) ? '기준 ' + fmt(r.currentTime) : '') + (ready(C.my) ? '  나 ' + fmt(m.currentTime) : '');
   var sc = $('#scrub'); if (p && p.v.duration && document.activeElement !== sc) sc.value = Math.round(p.v.currentTime / p.v.duration * 1000);
   var playing = [C.ref, C.my].some(function (q) { return ready(q) && !q.v.paused });
-  var pp = $('[data-act=cpp]'); if (pp) pp.textContent = playing ? '❚❚' : '▶';
+  var pp = $('[data-act=cpp]'); if (pp) pp.textContent = playing ? '❚❚ 멈추기' : '▶ 같이 재생';
+  var gp = $('[data-act=gpp]'); if (gp) gp.textContent = playing ? '❚❚' : '▶';
+  var gs = $('#gscrub'), gq = C.guide ? (C.guide === 1 ? C.ref : C.my) : null;
+  if (gs && gq && ready(gq) && gq.v.duration && document.activeElement !== gs) gs.value = Math.round(gq.v.currentTime / gq.v.duration * 1000);
   if (C.target === 'both' && C.linked && ready(C.ref) && ready(C.my) && !r.paused) {
     var want = r.currentTime - C.offset;
     if (want < 0) { if (!m.paused) m.pause(); if (m.currentTime > 0.05) m.currentTime = 0 }
@@ -236,11 +251,11 @@ function toggleSkel() {
   b.textContent = '🦴 불러오는 중…'; b.disabled = true;
   loadPose().then(function (pose) {
     if (!C) return;
-    C.pose = pose; C.skel = true; b.classList.add('pri'); b.textContent = '🦴 뼈대·각도'; b.disabled = false;
+    C.pose = pose; C.skel = true; b.classList.add('pri'); b.textContent = '🦴 뼈대 보기'; b.disabled = false;
     [C.ref, C.my].forEach(function (p) { if (ready(p)) detect(p) });
   }).catch(function () {
     if (!C) return;
-    b.textContent = '🦴 뼈대·각도'; b.disabled = false;
+    b.textContent = '🦴 뼈대 보기'; b.disabled = false;
     toast('뼈대 인식 프로그램을 받지 못했어요. 처음 한 번은 인터넷이 필요해요');
   });
 }
@@ -289,9 +304,43 @@ function renderAngles() {
   var box = $('#angles'); if (!box) return;
   if (!C.skel) { box.innerHTML = ''; return }
   var a = C.ref.ang || {}, b = C.my.ang || {};
-  box.innerHTML = '<div class="sec"><h3>관절 각도 비교 <small class="note">(멈춘 장면 기준)</small></h3><table class="atbl"><tr><th></th><th style="color:#1F8A5B">기준</th><th style="color:#D9661F">나</th><th>차이</th></tr>' +
+  box.innerHTML = '<div class="sec"><h3>관절 각도 비교 <small class="note">(멈춘 장면 기준)</small></h3><table class="atbl"><tr><th></th><th style="color:#1F8A5B">잘하는 사람</th><th style="color:#D9661F">나</th><th>차이</th></tr>' +
     ANGLES.map(function (A) {
       var x = a[A.k], y = b[A.k], df = x != null && y != null ? y - x : null;
       return '<tr><td>' + A.name + '</td><td>' + (x != null ? x + '°' : '–') + '</td><td>' + (y != null ? y + '°' : '–') + '</td><td class="' + (df != null && Math.abs(df) >= 15 ? 'bad' : '') + '">' + (df != null ? (df > 0 ? '+' : '') + df + '°' : '–') + '</td></tr>';
     }).join('') + '</table><p class="note">팔꿈치·무릎: 180°=쭉 폄, 90°=ㄴ자. 차이가 15° 이상이면 빨간색. 같은 순간(맞추기 후)에서 봐야 정확해요. 몸이 옆으로 돌면 각도가 실제와 다르게 나올 수 있어요.</p></div>';
+}
+
+/* ---------- 같은 순간 맞추기 안내 (2단계) ---------- */
+function startGuide() {
+  if (!ready(C.ref) || !ready(C.my)) { toast('두 영상을 먼저 넣어주세요'); return }
+  pauseAll(); C.guide = 1; C.target = 'ref'; drawGuide();
+}
+function drawGuide() {
+  var g = $('#cguide'), first = C.guide === 1;
+  $('#cctrl').hidden = true; g.hidden = false;
+  C.ref.el.classList.toggle('sel', first); C.my.el.classList.toggle('sel', !first);
+  g.innerHTML = '<div class="gstep">' + C.guide + ' / 2</div>' +
+    '<div class="gtxt">' + (first ? '<b>잘하는 사람 영상</b>(초록 테두리)을<br>제일 중요한 순간에 멈춰요<small>예: 공을 손에서 놓는 순간</small>' : '<b>내 영상</b>(주황 테두리)도<br>똑같은 순간에 멈춰요') + '</div>' +
+    '<div class="row basic gbtns"><button class="btn" data-gj="-1">◀◀ 1초</button><button class="btn" data-gj="-0.0333">◀ 조금</button><button class="btn pri" data-act="gpp">▶</button><button class="btn" data-gj="0.0333">조금 ▶</button><button class="btn" data-gj="1">1초 ▶▶</button></div>' +
+    '<input type="range" id="gscrub" min="0" max="1000" value="0" class="scrub" aria-label="영상 위치">' +
+    '<div class="row basic"><button class="btn" data-act="gcancel">취소</button><button class="btn pri" data-act="gnext">' + (first ? '여기서 멈춤 · 다음 ▶' : '맞추기 완료 ✓') + '</button></div>';
+  $$('[data-gj]', g).forEach(function (b) { b.onclick = function () { pauseAll(); seekBy(+b.dataset.gj) } });
+  var gs = $('#gscrub', g);
+  gs.oninput = function () { var p = C.guide === 1 ? C.ref : C.my; if (!p.v.duration) return; pauseAll(); p.v.currentTime = gs.value / 1000 * p.v.duration };
+  (C.guide === 1 ? C.ref : C.my).el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function guideNext() {
+  pauseAll();
+  if (C.guide === 1) { C.guide = 2; C.target = 'my'; drawGuide(); return }
+  C.offset = C.ref.v.currentTime - C.my.v.currentTime; C.linked = true;
+  if (C.clip) { C.clip.off = C.offset; save() }
+  endGuide(); toast('🎉 맞췄어요! ▶ 같이 재생을 눌러 보세요');
+}
+function endGuide() {
+  C.guide = 0; C.target = 'both';
+  $$('[data-tg]').forEach(function (x) { x.classList.toggle('on', x.dataset.tg === 'both') });
+  $('#cguide').hidden = true; $('#cctrl').hidden = false;
+  C.ref.el.classList.remove('sel'); C.my.el.classList.remove('sel');
+  linkStatus();
 }
