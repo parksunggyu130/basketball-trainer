@@ -146,6 +146,7 @@ textarea:focus,.inp:focus{border-color:var(--acc)}
 .courtsvg.edit{touch-action:none}
 .mini.full{width:52px}
 .courtsvg.edit [data-pid]{cursor:grab}
+.courtsvg.edit [data-ball]{pointer-events:auto;cursor:grab}
 .legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--sub);padding:6px 2px 0}
 .legend span{display:inline-flex;align-items:center;gap:4px}
 .lg{display:inline-block;width:11px;height:11px}
@@ -432,6 +433,11 @@ html,body{font-size:17px}
 .tj-pempty{text-align:center;color:#777;font-size:15px;line-height:1.5;margin-top:10px}
 .tj-pbtns{display:flex;gap:6px;justify-content:center;margin-top:auto;padding:8px}
 /* ---------- 패턴 편집 선수 수 ---------- */
+.notepv{display:flex;align-items:flex-end;gap:8px;margin-top:10px;position:sticky;top:calc(56px + env(safe-area-inset-top));z-index:5;background:var(--bg);padding:4px 0}
+.notepv svg{width:min(60vw,260px);height:auto;border-radius:10px;border:1px solid var(--line)}
+.notepv small{color:var(--sub)}
+.wchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.wchips .chip{font-size:14px;padding:6px 11px}
 .pe-n{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
 .pe-n .seg button{padding:7px 10px}
 /* ---------- 도움말 ---------- */

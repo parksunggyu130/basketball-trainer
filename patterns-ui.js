@@ -42,6 +42,99 @@ function alongPath(pts, len) {
   }
   return { pos: pts[pts.length - 1], path: out };
 }
+/* 곡선: 지나가는 점들을 부드럽게 이은 점 목록 (Catmull-Rom) */
+function smoothPts(pts) {
+  if (pts.length < 3) return pts.slice();
+  var out = [pts[0]];
+  for (var i = 0; i < pts.length - 1; i++) {
+    var p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    for (var s = 1; s <= 8; s++) {
+      var t = s / 8, t2 = t * t, t3 = t2 * t, q = [];
+      for (var c = 0; c < 2; c++) q.push(.5 * (2 * p1[c] + (-p0[c] + p2[c]) * t + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * t2 + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * t3));
+      out.push(q);
+    }
+  }
+  return out;
+}
+/* 길의 앞뒤를 선수 동그라미만큼 잘라냄 */
+function trimPath(pts, sa, sb) {
+  var L = pathLen(pts); if (L < sa + sb + .4) return null;
+  var out = [alongPath(pts, sa).pos], acc = 0;
+  for (var i = 1; i < pts.length; i++) { acc += dist(pts[i - 1], pts[i]); if (acc > sa && acc < L - sb) out.push(pts[i]) }
+  out.push(alongPath(pts, L - sb).pos);
+  return out;
+}
+function polyAttr(pts) { return pts.map(function (p) { return f1(p[0]) + ',' + f1(p[1]) }).join(' ') }
+function pathArrow(pts, color, marker, extra) {
+  if (pts.length < 3) return arrowLine(pts[0], pts[pts.length - 1], color, marker, extra);
+  var t = trimPath(pts, 1.9, 2.1); if (!t) return '';
+  return '<polyline points="' + polyAttr(t) + '" fill="none" stroke="' + color + '" stroke-width="' + (extra && extra.w || .4) + '"' + (marker ? ' marker-end="url(#' + marker + ')"' : '') + (extra && extra.dash ? ' stroke-dasharray="' + extra.dash + '"' : '') + ' stroke-linecap="round" stroke-linejoin="round"/>';
+}
+function pathZigzag(pts, color) {
+  if (pts.length < 3) return zigzag(pts[0], pts[pts.length - 1], color);
+  var t = trimPath(pts, 1.9, 2.1); if (!t) return '';
+  var L = pathLen(t), out = [t[0]], n = Math.floor((L - 1.4) / .8);
+  for (var j = 1; j <= n; j++) {
+    var d = j * .8, a = alongPath(t, Math.max(0, d - .2)).pos, b = alongPath(t, Math.min(L, d + .2)).pos, c = alongPath(t, d).pos, dd = dist(a, b) || 1, amp = j % 2 ? .7 : -.7;
+    out.push([c[0] - (b[1] - a[1]) / dd * amp, c[1] + (b[0] - a[0]) / dd * amp]);
+  }
+  out.push(t[t.length - 1]);
+  return '<polyline points="' + polyAttr(out) + '" fill="none" stroke="' + color + '" stroke-width=".4" stroke-linejoin="round" marker-end="url(#ah-o)"/>';
+}
+/* 공격수가 움직인 길: 손가락으로 그린 점(via)이 있으면 그 곡선, 없으면 가만히 서 있는 우리 선수를 돌아가는 곡선 */
+function offPath(a, b, via, o, k, pO) {
+  if (via && via.length) return smoothPts([a].concat(via, [b]));
+  var best = null;
+  for (var j in o) {
+    if (j === k || (pO[j] && moved(pO[j], o[j]))) continue;
+    var r = segNear(a, b, o[j]);
+    if (r[1] < 2.8 && r[0] > .12 && r[0] < .88 && (!best || r[0] < best.t)) best = { t: r[0], c: o[j] };
+  }
+  if (!best) return null;
+  var cl = lerp(a, b, best.t), nx = cl[0] - best.c[0], ny = cl[1] - best.c[1], nd = Math.hypot(nx, ny);
+  if (nd < .01) { nx = -(b[1] - a[1]); ny = b[0] - a[0]; nd = Math.hypot(nx, ny) || 1 }
+  return smoothPts([a, [best.c[0] + nx / nd * 3.6, best.c[1] + ny / nd * 3.6], b]);
+}
+/* ---------- 단계 설명 자동으로 쓰기 ---------- */
+function ro(w) { var c = w.charCodeAt(w.length - 1) - 0xAC00; return c < 0 || c > 11171 || c % 28 === 0 || c % 28 === 8 ? w + '로' : w + '으로' }
+/* 코트 위치 이름 (골대가 위쪽, y 가 작을수록 골대 가까이) */
+function placeName(q) {
+  var x = q[0], y = q[1], side = x < 25 ? '왼쪽 ' : '오른쪽 ';
+  if (y > 50) return '우리 코트';
+  if (y > 40) return '하프라인 근처';
+  if (dist(q, BASKET) < 8) return '골밑';
+  if (y < 12 && (x < 9 || x > 41)) return side + '코너';
+  if (x >= 17 && x <= 33 && y < 20) return '페인트존';
+  if (x >= 14 && x <= 36 && y >= 15 && y <= 24) return side + '엘보';
+  if (x >= 16 && x <= 34) return '탑';
+  return side + '윙';
+}
+function autoNote(n, i) {
+  var cur = n.frames[i], prev = i ? n.frames[i - 1] : null, s = [], k;
+  if (!prev) return cur.ball ? cur.ball + '번이 공을 가지고 ' + placeName(cur.o[cur.ball]) + '에 서요.' : '선수들이 처음 자리에 서요.';
+  if (prev.ball && cur.ball && prev.ball !== cur.ball) s.push(prev.ball + '번이 ' + cur.ball + '번에게 패스');
+  for (k in cur.o) {
+    if (!moved(prev.o[k], cur.o[k])) continue;
+    var to = placeName(cur.o[k]);
+    if (cur.screen.indexOf(k) >= 0) {
+      var t = null, bd = 6; for (var j in cur.x) if (j !== k) { var d = dist(cur.o[k], cur.x[j]); if (d < bd) { bd = d; t = j } }
+      s.push(k + '번이 ' + (t ? t + '번 수비에게 ' : '') + '스크린');
+    } else if (prev.ball === k && cur.ball === k) s.push(k + '번이 ' + ro(to) + ' 드리블');
+    else if (to === '골밑' || (to === '페인트존' && dist(prev.o[k], BASKET) > dist(cur.o[k], BASKET) + 4)) s.push(k + '번이 ' + ro(to) + ' 컷 (달려 들어가기)');
+    else s.push(k + '번이 ' + ro(to) + ' 이동');
+  }
+  (cur.hits || []).forEach(function (h) { s.push(h.k + '번 수비는 스크린에 걸려요 💥') });
+  return s.length ? s.join('. ') + '.' : '';
+}
+/* 손가락으로 그린 길을 꼭 필요한 점만 남기기 (Douglas-Peucker) */
+function simplifyPts(pts, eps) {
+  if (pts.length < 3) return pts.slice();
+  var a = pts[0], b = pts[pts.length - 1], mi = 0, md = 0;
+  for (var i = 1; i < pts.length - 1; i++) { var d = segNear(a, b, pts[i])[1]; if (d > md) { md = d; mi = i } }
+  if (md <= eps) return [a, b];
+  var l = simplifyPts(pts.slice(0, mi + 1), eps), r = simplifyPts(pts.slice(mi), eps);
+  return l.slice(0, -1).concat(r);
+}
 /* 수비가 a → b 로 가는 길에 스크린(cs: 공격수 위치들)이 있으면 막힌 결과 { to, path, hit } */
 function blockDef(a, b, cs, mode) {
   var best = null;
@@ -66,7 +159,8 @@ function normPattern(p) {
   p.frames.forEach(function (f) {
     var o = Object.assign({}, pO, clone(f.o || {}));
     var ball = f.ball != null ? String(f.ball) : pB, x, k, xp = {}, hits = [];
-    var scr = (f.screen || []).map(String);
+    var scr = (f.screen || []).map(String), op = {};
+    for (k in o) if (pO[k] && moved(pO[k], o[k])) { var pp = offPath(pO[k], o[k], f.via && f.via[k], o, k, pO); if (pp) op[k] = pp }
     if (p.def === 'manual') { x = Object.assign({}, pX, clone(f.x || {})); pX = x }
     else if (p.def === 'none') x = {};
     else {
@@ -92,8 +186,9 @@ function normPattern(p) {
       for (k in x) if (+k <= p.n) xx[k] = x[k];
       sc = sc.filter(function (q) { return +q <= p.n }); if (bb && +bb > p.n) bb = null;
       hits = hits.filter(function (h) { return +h.k <= p.n });
+      for (k in op) if (+k > p.n) delete op[k];
     }
-    out.push({ o: oo, x: xx, ball: bb, screen: sc, note: f.note || '', xp: xp, hits: hits });
+    out.push({ o: oo, x: xx, ball: bb, screen: sc, note: f.note || '', xp: xp, hits: hits, op: op });
     pO = o; pB = ball; pScr = scr;
   });
   return { frames: out };
@@ -159,10 +254,10 @@ function defPlayer(k, p, ghost) {
     '<rect x="' + f1(p[0] - 1.6) + '" y="' + f1(p[1] - 1.6) + '" width="3.2" height="3.2" rx=".7" fill="#fff" stroke="' + PCOL.d + '" stroke-width=".4"/>' +
     '<text x="' + f1(p[0]) + '" y="' + f1(p[1] + .08) + '" font-size="2" font-weight="800" fill="' + PCOL.d + '" text-anchor="middle" dominant-baseline="central" font-family="system-ui,sans-serif">' + k + '</text></g>';
 }
-function ballAt(p) { return '<circle cx="' + f1(p[0] + 1.5) + '" cy="' + f1(p[1] - 1.5) + '" r="1" fill="' + PCOL.ball + '" stroke="#7A2E08" stroke-width=".2" pointer-events="none"/>' }
+function ballAt(p) { return '<g data-ball="1" pointer-events="none"><circle cx="' + f1(p[0] + 1.5) + '" cy="' + f1(p[1] - 1.5) + '" r="1.9" fill="transparent"/><circle cx="' + f1(p[0] + 1.5) + '" cy="' + f1(p[1] - 1.5) + '" r="1" fill="' + PCOL.ball + '" stroke="#7A2E08" stroke-width=".2"/></g>' }
 function screenBar(k, fr, prev) {
   var p = fr.o[k], dir = null;
-  if (prev && moved(prev.o[k], p)) { var t = trim(prev.o[k], p, 0, 0); if (t) dir = [t[2], t[3]] }
+  if (prev && moved(prev.o[k], p)) { var op = fr.op && fr.op[k], t = trim(op ? op[op.length - 2] : prev.o[k], p, 0, 0); if (t) dir = [t[2], t[3]] }
   if (!dir) { /* 가장 가까운 (남의) 수비 쪽을 향해 */
     var best = null, bd = 1e9;
     for (var j in fr.x) { if (j === k) continue; var d = dist(p, fr.x[j]); if (d < bd) { bd = d; best = fr.x[j] } }
@@ -186,9 +281,10 @@ function courtFrame(n, i, opt) {
     }
     for (k in cur.o) {
       if (!moved(prev.o[k], cur.o[k])) continue;
-      if (cur.screen.indexOf(k) >= 0) h += arrowLine(prev.o[k], cur.o[k], PCOL.o, null);
-      else if (prev.ball === k && cur.ball === k) h += zigzag(prev.o[k], cur.o[k], PCOL.o);
-      else h += arrowLine(prev.o[k], cur.o[k], PCOL.o, 'ah-o');
+      var pts = cur.op && cur.op[k] || [prev.o[k], cur.o[k]];
+      if (cur.screen.indexOf(k) >= 0) h += pathArrow(pts, PCOL.o, null);
+      else if (prev.ball === k && cur.ball === k) h += pathZigzag(pts, PCOL.o);
+      else h += pathArrow(pts, PCOL.o, 'ah-o');
     }
     if (prev.ball && cur.ball && prev.ball !== cur.ball && prev.o[prev.ball] && cur.o[cur.ball])
       h += arrowLine(prev.o[prev.ball], cur.o[cur.ball], PCOL.pass, 'ah-p', { w: .45, dash: '.9 .6' });
@@ -205,7 +301,7 @@ function lerp(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) 
 /* i-1 → i 사이 움직이는 중간 그림 */
 function courtTween(n, i, t, showD) {
   var prev = n.frames[i - 1], cur = n.frames[i], e = ease(t), h = '', k, pos = {};
-  for (k in cur.o) pos[k] = lerp(prev.o[k] || cur.o[k], cur.o[k], e);
+  for (k in cur.o) { var op = cur.op && cur.op[k]; pos[k] = op ? alongPath(op, pathLen(op) * e).pos : lerp(prev.o[k] || cur.o[k], cur.o[k], e) }
   if (showD) for (k in cur.x) { var xp = cur.xp && cur.xp[k]; h += defPlayer(k, xp ? alongPath(xp, pathLen(xp) * e).pos : lerp(prev.x[k] || cur.x[k], cur.x[k], e)) }
   for (k in cur.o) h += offPlayer(k, pos[k]);
   if (cur.ball && pos[cur.ball]) {
@@ -384,12 +480,15 @@ function renderPatternEdit(id) {
     '<div class="pe-n"><span class="note">👥 선수 수</span><div class="seg">' + [1, 2, 3, 4, 5].map(function (n) { return '<button data-pn="' + n + '" class="' + ((p.n || 5) === n ? 'on' : '') + '">' + n + '명</button>' }).join('') + '</div></div>' +
     '<div id="scrset"><div class="pe-n"><span class="note">┳ 스크린에 걸린 수비</span><div class="seg"><button data-sm="around">돌아서 늦게</button><button data-sm="stop">막혀서 멈춤</button><button data-sm="off">끄기</button></div></div>' +
     '<label class="tgl" style="margin-top:6px"><input type="checkbox" id="autoscr"> 공격수가 수비 바로 앞에 서면 자동으로 스크린</label></div>' +
+    '<div class="pe-n"><button class="btn sm" data-act="undo">↶ 되돌리기</button><label class="tgl" style="margin:0"><input type="checkbox" id="peauto"> 같은 선수를 또 옮기면 새 단계 자동</label></div>' +
     '<p class="note" id="toolhelp" style="margin:6px 0"></p>' +
     '<div class="pe-zbar"><span class="note">코트 크기</span><div class="tj-zoom"><button class="btn" data-pz="-1" aria-label="작게">－</button><button class="btn sm" data-pz="0" id="pezl">100%</button><button class="btn" data-pz="1" aria-label="크게">＋</button></div></div>' +
     '<div class="court pe-wrap" id="pewrap">' + courtSvg('court', ' edit', isFull(p)) + '</div>' +
     '<p class="note" id="pehint" style="margin:4px 0 0;text-align:center"></p>' + legendHtml(p.def !== 'none') +
     '<div class="frames" id="frames"></div>' +
-    '<label class="field" style="margin-top:10px"><span id="notelbl">이 단계 설명</span><textarea id="fnote" rows="3" placeholder="예: 5번이 올라와 1번 수비에게 스크린"></textarea></label>' +
+    '<div class="notepv" id="notepv" hidden></div>' +
+    '<label class="field" style="margin-top:10px"><span id="notelbl">이 단계 설명</span><textarea id="fnote" rows="3" placeholder="선수를 움직이면 설명이 저절로 써져요"></textarea></label>' +
+    '<div class="wchips">' + ['슛!', '레이업', '패스', '드리블', '스크린', '컷', '수비를 따돌려요', '빈 곳으로'].map(function (w) { return '<button class="chip" data-word="' + w + '">' + w + '</button>' }).join('') + '<button class="chip" data-act="autonote">🪄 다시 자동으로</button></div>' +
     '<div class="btns" style="margin-top:8px"><button class="btn sm" data-act="defreset">수비 자동 위치로</button><button class="btn sm" data-act="playall">▶ 처음부터 움직임 보기</button></div>' +
     '<div class="sec"><h3>패턴 정보</h3>' +
     '<div class="two"><label class="field"><span>분류</span><select class="inp" id="pcat">' + PCATS.concat(['우리 팀']).map(function (c) { return '<option' + (c === p.cat ? ' selected' : '') + '>' + c + '</option>' }).join('') + '</select></label>' +
@@ -413,7 +512,9 @@ function renderPatternEdit(id) {
     $$('#pcheck,[data-act=pjw]').forEach(function (el) { el.hidden = true });
     var h3 = $('.sec h3'); $$('.sec h3').forEach(function (x) { if (x.textContent === '패턴 정보') x.textContent = '패턴 설정' });
   }
-  on('defreset', function () { PE.p.frames[PE.i].x = {}; if (p.def === 'manual' && PE.i === 0) PE.p.frames[0].x = autoDef(PE.p.frames[0].o); peSave(); peDraw() });
+  on('undo', peUndo);
+  $('#peauto').checked = peAuto(); $('#peauto').onchange = function () { S.ui.peAuto = this.checked; save() };
+  on('defreset', function () { peSnap(); PE.p.frames[PE.i].x = {}; if (p.def === 'manual' && PE.i === 0) PE.p.frames[0].x = autoDef(PE.p.frames[0].o); peSave(); peDraw() });
   on('playall', pePlayAll);
   on('pdel', function () { confirmSheet('"' + p.name + '" 패턴을 지울까요?', function () { S.patterns = S.patterns.filter(function (x) { return x.id !== p.id }); if (p.tjDate) { tjSet(p.tjDate, 'pat', false); location.hash = '#/tj/' + p.tjDate; return } delete S.pnotes[p.id]; delete S.fav['p:' + p.id]; save(); location.hash = '#/pat' }) });
   $('#pname').oninput = function () { p.name = this.value.trim() || '새 패턴'; save(); peCheck() };
@@ -430,7 +531,12 @@ function renderPatternEdit(id) {
   $('#pen').oninput = function () { p.en = this.value.trim(); save() };
   $('#plv').onchange = function () { p.level = this.value; save(); peCheck() };
   on('pjw', function () { journalSheet(null, p.id) });
-  $('#fnote').oninput = function () { p.frames[PE.i].note = this.value; save(); peCheck() };
+  $('#fnote').oninput = function () { p.frames[PE.i].note = this.value; p.frames[PE.i].noteAuto = false; save(); peCheck() };
+  /* 설명 쓸 때 키보드에 코트가 가려지지 않게: 작은 코트를 설명 칸 바로 위에 */
+  $('#fnote').onfocus = function () { peNotePv(true); setTimeout(function () { $('#notepv').scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 350) };
+  $('#fnote').onblur = function () { setTimeout(function () { if (document.activeElement !== $('#fnote')) peNotePv(false) }, 200) };
+  $$('[data-word]').forEach(function (b) { b.onmousedown = function (e) { e.preventDefault() }; b.onclick = function () { var ta = $('#fnote'), f = p.frames[PE.i], v = (f.note || '').replace(/\s+$/, ''); f.note = (v ? v + (/[.!]$/.test(v) ? ' ' : ' ') : '') + b.dataset.word; f.noteAuto = false; ta.value = f.note; save(); peCheck() } });
+  on('autonote', function () { var f = p.frames[PE.i]; f.noteAuto = true; f.note = ''; peDraw(); toast('설명을 다시 자동으로 썼어요') });
   $$('[data-sm]').forEach(function (b) { b.onclick = function () { p.screenMode = b.dataset.sm; save(); peDraw(); toast({ around: '스크린에 걸린 수비는 돌아서 가느라 늦어요', stop: '스크린에 걸린 수비는 그 자리에서 막혀요', off: '스크린이 있어도 수비가 그냥 지나가요' }[p.screenMode]) } });
   $('#autoscr').onchange = function () { p.autoScreen = this.checked; save(); peDraw() };
   $$('[data-tool]').forEach(function (b) { b.onclick = function () { PE.tool = b.dataset.tool; $$('[data-tool]').forEach(function (x) { x.classList.toggle('on', x === b) }); peHelp() } });
@@ -440,7 +546,7 @@ function renderPatternEdit(id) {
 }
 function peHelp() {
   $('#toolhelp').textContent = {
-    move: '선수(파란 원·빨간 네모)를 손가락으로 끌어서 이 단계의 위치로 옮기세요. 공격수를 다른 수비 바로 앞에 세우면 스크린이 되고, 그 수비는 스크린을 뚫지 못해요 (💥).',
+    move: '선수를 손가락으로 끌어 옮겨요. 돌아가는 길로 끌면 그 길 그대로 곡선이 돼요. 공(주황)을 끌어 다른 선수에게 놓으면 패스! 공격수를 다른 수비 바로 앞에 세우면 스크린 (💥).',
     ball: '공을 받을 공격 선수를 누르세요. 앞 단계와 공 가진 사람이 다르면 패스(점선)로 그려져요.',
     screen: '스크린을 거는 공격 선수를 누르세요. 다시 누르면 취소돼요. (자동 스크린이 켜져 있으면 공격수를 수비 바로 앞에 옮기기만 해도 스크린이 돼요)'
   }[PE.tool];
@@ -453,16 +559,21 @@ function peDraw() {
   $('#frames').innerHTML = p.frames.map(function (f, j) { return '<button class="fchip' + (j === i ? ' on' : '') + '" data-fi="' + j + '">' + (j + 1) + '</button>' }).join('') +
     '<button class="fchip add" data-act="fadd">＋ 다음 단계</button>' + (p.frames.length > 1 ? '<button class="fchip del" data-act="fdel">이 단계 삭제</button>' : '');
   $('#notelbl').textContent = (i + 1) + '단계 설명 — 어떻게 움직이나요?';
+  /* 설명이 비었거나 자동으로 쓴 설명이면 움직임에 맞춰 다시 쓴다 (직접 고치면 그대로 둠) */
+  var chg = false;
+  p.frames.forEach(function (f, j) { if (!f.note || f.noteAuto) { var a = autoNote(n, j); if (a && a !== f.note) { f.note = a; f.noteAuto = true; chg = true } } });
+  if (chg) save();
   var ta = $('#fnote'); if (document.activeElement !== ta) ta.value = p.frames[i].note || '';
+  if (!$('#notepv').hidden) peNotePv(true);
   peCheck();
   $$('[data-fi]').forEach(function (b) { b.onclick = function () { PE.i = +b.dataset.fi; peDraw() } });
   $('[data-act=fadd]').onclick = function () {
     var cur = normPattern(p).frames[i];
     var nf = { o: clone(cur.o), x: p.def === 'manual' ? clone(cur.x) : {}, ball: cur.ball, screen: [], note: '' };
-    p.frames.splice(i + 1, 0, nf); PE.i = i + 1; save(); peDraw();
+    peSnap(); p.frames.splice(i + 1, 0, nf); PE.i = i + 1; save(); peDraw();
     toast((PE.i + 1) + '단계: 선수를 끌어서 움직이세요');
   };
-  var del = $('[data-act=fdel]'); if (del) del.onclick = function () { confirmSheet((i + 1) + '단계를 지울까요?', function () { p.frames.splice(i, 1); PE.i = Math.max(0, i - 1); save(); peDraw() }) };
+  var del = $('[data-act=fdel]'); if (del) del.onclick = function () { confirmSheet((i + 1) + '단계를 지울까요?', function () { peSnap(); p.frames.splice(i, 1); PE.i = Math.max(0, i - 1); save(); peDraw() }) };
 }
 function svgPoint(svg, e) {
   var pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
@@ -503,19 +614,30 @@ function peWireCourt() {
       if (zoomed) { e.preventDefault(); peStartPan() }
       return;
     }
+    var bg = e.target.closest('[data-ball]');
+    if (bg && PE.tool !== 'screen') { e.preventDefault(); PE.drag = { side: 'ball', id: e.pointerId }; try { svg.setPointerCapture(e.pointerId) } catch (x) {} return }
     var g = e.target.closest('[data-pid]');
     if (!g || g.getAttribute('opacity')) { if (zoomed) { e.preventDefault(); try { svg.setPointerCapture(e.pointerId) } catch (x) {} peStartPan() } return }
     var pid = g.dataset.pid, side = pid[0], k = pid.slice(1), p = PE.p, f = p.frames[PE.i];
-    if (PE.tool === 'ball') { if (side === 'o') { f.ball = k; save(); peDraw() } return }
+    if (PE.tool === 'ball') { if (side === 'o' && f.ball !== k) { peSnap(); f.ball = k; save(); peDraw() } return }
     if (PE.tool === 'screen') {
       if (side !== 'o') return;
-      f.screen = f.screen || []; var at = f.screen.indexOf(k);
+      peSnap(); f.screen = f.screen || []; var at = f.screen.indexOf(k);
       if (at >= 0) f.screen.splice(at, 1); else f.screen.push(k);
       save(); peDraw(); return;
     }
     if (side === 'x' && p.def === 'none') return;
     e.preventDefault();
-    PE.drag = { side: side, k: k, id: e.pointerId };
+    peSnap();
+    /* 이 단계에서 이미 움직인 선수를 또 옮기면 → 다음 단계를 자동으로 만들고 거기서 옮김 */
+    var nn = normPattern(p);
+    if (side === 'o' && PE.i > 0 && peAuto() && moved(nn.frames[PE.i - 1].o[k], nn.frames[PE.i].o[k])) {
+      var cur = nn.frames[PE.i];
+      p.frames.splice(PE.i + 1, 0, { o: clone(cur.o), x: p.def === 'manual' ? clone(cur.x) : {}, ball: cur.ball, screen: [], note: '' });
+      PE.i++; f = p.frames[PE.i]; nn = normPattern(p); peDraw(); toast((PE.i + 1) + '단계를 새로 만들었어요');
+    }
+    var st = side === 'o' ? nn.frames[PE.i].o[k] : null;
+    PE.drag = { side: side, k: k, id: e.pointerId, trail: st ? [st] : [], was: side === 'o' && PE.i > 0 && moved(nn.frames[PE.i - 1].o[k], st) };
     try { svg.setPointerCapture(e.pointerId) } catch (x) {}
   });
   svg.addEventListener('pointermove', function (e) {
@@ -523,7 +645,8 @@ function peWireCourt() {
     if (PE && PE.pan) { var m = peMid(), w = $('#pewrap'); w.scrollLeft = PE.pan.sl - (m[0] - PE.pan.mid[0]); w.scrollTop = PE.pan.st - (m[1] - PE.pan.mid[1]); return }
     var d = PE && PE.drag; if (!d || d.id !== e.pointerId) return;
     var pt = svgPoint(svg, e).map(f1), f = PE.p.frames[PE.i];
-    if (d.side === 'o') f.o[d.k] = pt;
+    if (d.side === 'ball') { $('#dyn').innerHTML = courtFrame(normPattern(PE.p), PE.i, { showD: PE.p.def !== 'none' }).replace(/<g data-ball=[\s\S]*?<\/g>/, '') + ballAt([pt[0] - 1.5, pt[1] + 1.5]); d.pt = pt; return }
+    if (d.side === 'o') { f.o[d.k] = pt; var tl = d.trail[d.trail.length - 1]; if (!tl || dist(tl, pt) > .6) d.trail.push(pt) }
     else { f.x = f.x || {}; f.x[d.k] = pt }
     $('#dyn').innerHTML = courtFrame(normPattern(PE.p), PE.i, { showD: PE.p.def !== 'none' });
   });
@@ -531,10 +654,41 @@ function peWireCourt() {
     if (!PE) return;
     delete PE.ptrs[e.pointerId];
     if (PE.pan) { if (Object.keys(PE.ptrs).length) peStartPan(); else PE.pan = null; return }
-    if (PE.drag && PE.drag.id === e.pointerId) { PE.drag = null; save(); peDraw() }
+    if (PE.drag && PE.drag.id === e.pointerId) { peDragEnd(PE.drag); PE.drag = null; save(); peDraw() }
   }
   svg.addEventListener('pointerup', end);
   svg.addEventListener('pointercancel', end);
+}
+/* 끌기가 끝났을 때: 공은 가장 가까운 우리 선수에게 패스, 공격수는 손가락으로 그린 길을 곡선(via)으로 저장 */
+function peDragEnd(d) {
+  var p = PE.p, f = p.frames[PE.i], n = normPattern(p);
+  if (d.side === 'ball') {
+    if (!d.pt) { PE.hist.pop(); return }
+    var best = null, bd = 5;
+    for (var k in n.frames[PE.i].o) { var dd = dist(n.frames[PE.i].o[k], d.pt); if (dd < bd) { bd = dd; best = k } }
+    if (best && best !== n.frames[PE.i].ball) { f.ball = best; toast(best + '번에게 패스!') } else PE.hist.pop();
+    return;
+  }
+  if (d.side !== 'o' || PE.i === 0) return;
+  var from = n.frames[PE.i - 1].o[d.k], to = n.frames[PE.i].o[d.k];
+  if (!from || !to) return;
+  var old = (f.via && f.via[d.k]) || [], pts = d.was ? [from].concat(old, d.trail) : [from].concat(d.trail.slice(1));
+  pts.push(to);
+  var via = simplifyPts(pts, 1.1).slice(1, -1).slice(0, 6);
+  f.via = f.via || {};
+  if (via.length && moved(from, to)) f.via[d.k] = via.map(function (q) { return [f1(q[0]), f1(q[1])] }); else delete f.via[d.k];
+}
+function peNotePv(show) {
+  var el = $('#notepv'); if (!el) return;
+  el.hidden = !show; if (!show) return;
+  var p = PE.p, full = isFull(p);
+  el.innerHTML = '<svg viewBox="' + vbox(full) + '" class="mini' + (full ? ' full' : '') + '">' + courtDefs() + courtBase(full) + courtFrame(normPattern(p), PE.i, { showD: p.def !== 'none' }) + '</svg><small>' + (PE.i + 1) + '단계 그림</small>';
+}
+function peAuto() { return !(S.ui && S.ui.peAuto === false) }
+function peSnap() { PE.hist = PE.hist || []; PE.hist.push(JSON.stringify({ f: PE.p.frames, i: PE.i })); if (PE.hist.length > 40) PE.hist.shift() }
+function peUndo() {
+  var h = PE.hist && PE.hist.pop(); if (!h) { toast('더 되돌릴 게 없어요'); return }
+  var s = JSON.parse(h); PE.p.frames = s.f; PE.i = Math.min(s.i, s.f.length - 1); save(); peDraw(); toast('되돌렸어요');
 }
 function pePlayAll() {
   var n = normPattern(PE.p), i = 0, showD = PE.p.def !== 'none';
