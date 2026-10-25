@@ -178,7 +178,7 @@ function patternCard(p) {
     '<svg class="mini' + (isFull(p) ? ' full' : '') + '" viewBox="' + vbox(isFull(p)) + '" aria-hidden="true">' + courtBase(isFull(p)) + courtFrame(n, 0, { showD: p.def !== 'none', arrows: false }) + '</svg>' +
     '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><div class="row"><span class="nm">' + esc(p.name) + '</span>' + '' + '</div>' +
     '<div class="sm">' + esc(p.summary || '') + '</div>' +
-    '<div class="row"><span class="tag">' + esc(p.cat) + '</span>' + (p.level ? '<span class="tag lv-' + esc(p.level) + '">' + esc(p.level) + '</span>' : '') + '<span class="tag">' + p.frames.length + '단계</span>' + (p.custom ? '<span class="tag vid">내 패턴</span>' : '') + masteryTag(p.id) + '</div></div></a>';
+    '<div class="row"><span class="tag">' + esc(p.cat) + '</span>' + (p.level ? '<span class="tag lv-' + esc(p.level) + '">' + esc(p.level) + '</span>' : '') + '<span class="tag">' + p.frames.length + '단계</span>' + (p.custom ? '<span class="tag vid">내 패턴</span>' : '') + (PATTERN_VIDS[p.id] ? '<span class="tag coach">🎬 코치님 영상</span>' : '') + masteryTag(p.id) + '</div></div></a>';
 }
 var PCAT_EMO = { '공격 기본': '🏀', '세트 오펜스': '🧩', '속공': '🚀', '프레스 브레이크': '🧨', '수비': '🛡️', '인바운드': '📥', '내 패턴': '✏️' };
 function renderPatternList() {
@@ -219,6 +219,7 @@ function renderPatternView(id) {
     '<button class="btn pplay" data-act="pplay" id="pplay">▶ 처음부터 움직임 보기</button>' +
     '<p class="note" style="text-align:center;margin:6px 0 0">코트 그림을 눌러도 다음 단계로 넘어가요</p>' + legendHtml(PV.showD) +
     (p.def !== 'none' ? '<label class="tgl"><input type="checkbox" id="showD" checked> 수비(빨간 네모) 보이기</label>' : '') +
+    patVidsHtml(p) +
     '<div class="sec"><h3>단계별 움직임</h3><ol class="steps" id="psteps">' + n.frames.map(function (f, i) { return '<li data-pi="' + i + '"><span class="num">' + (i + 1) + '</span><div class="tx">' + esc(f.note || '(설명 없음)') + '</div></li>' }).join('') + '</ol></div>' +
     (p.keys && p.keys.length ? '<div class="sec"><h3>핵심 포인트</h3><div class="checks">' + p.keys.map(function (k) { return '<label><span>✓</span><span>' + esc(k) + '</span></label>' }).join('') + '</div></div>' : '') +
     '<div class="sec"><h3>📓 내 일지 <button class="btn sm pri" data-act="pjw" style="margin-left:auto">＋ 일지 쓰기</button></h3><div class="jlist">' + (journalOf(p.id).map(journalCard).join('') || '<p class="note" style="margin:0">아직 이 패턴 일지가 없어요. 배운 날 적어두면 복습할 때 좋아요.</p>') + '</div></div>' +
@@ -240,7 +241,22 @@ function renderPatternView(id) {
   on('pjw', function () { journalSheet(null, p.id) });
   wireJournalCards(function () { renderPatternView(p.id) });
   $$('[data-pq]').forEach(function (b) { b.onclick = function () { openExternal('https://www.youtube.com/results?search_query=' + encodeURIComponent(b.dataset.pq)) } });
+  $$('[data-pv]').forEach(function (b) { b.onclick = function () { playPatVid(b) } });
   pvDraw();
+}
+/* 코치님 영상: 누른 영상 하나만 코트 아래에서 재생 (route() 의 stopPlayer 가 정리) */
+function patVidsHtml(p) {
+  var v = PATTERN_VIDS[p.id]; if (!v) return '';
+  return '<div class="sec"><h3>🎬 코치님 영상으로 보기</h3><div id="pvbox"></div><div class="btns" style="flex-direction:column">' +
+    v.map(function (x) { return '<button class="btn" data-pv="' + x.yt + '" style="text-align:left">▶ ' + esc(x.t) + ' <small style="color:var(--sub)">· ' + esc(COACHES[x.coach].full) + '</small></button>' }).join('') +
+    '</div><p class="note" style="margin:6px 0 0">영상은 인터넷이 있어야 나와요. 그림으로 움직임을 익힌 다음 실제 선수 영상으로 확인해 보세요.</p></div>';
+}
+function playPatVid(b) {
+  stopPlayer();
+  $$('[data-pv]').forEach(function (x) { x.classList.toggle('pri', x === b) });
+  var box = $('#pvbox'); box.innerHTML = '<div class="player tall" id="ppl" style="margin-bottom:10px"></div>';
+  P = makeYTPlayer($('#ppl'), { id: b.dataset.pv, start: 0 }); P.play();
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 function pvDraw() {
   var n = PV.n, i = PV.i;

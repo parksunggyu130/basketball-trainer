@@ -97,7 +97,7 @@ function setVideo(p, blob) {
 function loadRef() {
   var d = C.d, k = refKey(d), name = $('#refname');
   if (!k) {
-    var yt = S.media[d.id] && S.media[d.id].type === 'yt';
+    var m = mediaOf(d), yt = m && m.type === 'yt';
     setVideo(C.ref, null);
     C.ref.ph.innerHTML = '<p>' + (yt ? '유튜브 영상은 비교 화면에서 쓸 수 없어요 (프레임 이동·겹치기가 안 됨).<br>폰에 있는 기준 영상을 골라주세요.' : '비교할 기준 영상(잘하는 사람 영상)을 골라주세요.') + '</p><button class="btn sm pri" data-act="pickref">📱 기준 영상 고르기</button>';
     name.textContent = ' 없음'; return;

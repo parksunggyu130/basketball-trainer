@@ -14,7 +14,7 @@ window.TIPS = [
       ['직선으로 림', '옆으로 돌아가면 다른 수비가 도와줄 시간이 생긴다. 지나갔으면 림까지 최단 거리.']
     ],
     remember: '기술 3개보다 첫 걸음 1개, 그리고 수비 앞발 쪽으로.',
-    drills: ['firststep', 'triplethreat', 'crossover'], q: ['농구 돌파 잘하는 법', 'how to blow by defender first step']
+    drills: ['k-back-foot', 'triplethreat', 'crossover'], q: ['농구 돌파 잘하는 법', 'how to blow by defender first step']
   },
   {
     id: 't-closeout', cat: '돌파', level: '초급', title: '달려오는 수비(클로즈아웃) 공략',
@@ -27,7 +27,7 @@ window.TIPS = [
       ['잡고 오래 들고 있지 않기', '잡고 1초 안에 슛·돌파·패스 결정. 오래 들고 있으면 수비가 자리 잡는다.']
     ],
     remember: '멀면 슛, 날아오면 페이크, 붙으면 돌파 — 1초 안에.',
-    drills: ['shotfake', 'catchshoot', 'sidestep'], q: ['클로즈아웃 공략', 'attacking closeouts basketball']
+    drills: ['k-shimmy-jab', 'm-sg-drill', 'k-space-steps6'], q: ['클로즈아웃 공략', 'attacking closeouts basketball']
   },
   {
     id: 't-helpd', cat: '돌파', level: '중급', title: '골밑에 큰 수비가 기다릴 때',
@@ -40,7 +40,7 @@ window.TIPS = [
       ['코너 슈터 확인', '빅맨 대신 코너 수비가 도와주러 오면 코너 3점이 빈다 → 킥아웃.']
     ],
     remember: '도움 수비가 오면 누군가는 비어 있다. 슛하기 전에 한 번 본다.',
-    drills: ['floater', 'eurostep', 'reverse', 'kickout', 'contact'], q: ['돌파 후 마무리 선택', 'finishing against shot blockers']
+    drills: ['m-small-guard5', 'm-euro', 'k-guard-finish5', 'm-kickout', 'm-offarm'], q: ['돌파 후 마무리 선택', 'finishing against shot blockers']
   },
   {
     id: 't-block', cat: '돌파', level: '중급', title: '레이업이 자꾸 블록당할 때',
@@ -53,7 +53,7 @@ window.TIPS = [
       ['림을 방패로', '림 반대편으로 지나가서 리버스로 넣으면 림이 수비 손을 막아준다.']
     ],
     remember: '수비에게서 먼 손, 높은 백보드, 다른 타이밍.',
-    drills: ['powerlayup', 'hopstep', 'reverse', 'layup-l'], q: ['레이업 블록 안 당하는 법', 'how to avoid getting blocked layup']
+    drills: ['m-pro-hop', 'k-guard-finish5', 'layup-l'], q: ['레이업 블록 안 당하는 법', 'how to avoid getting blocked layup']
   },
   {
     id: 't-press', cat: '돌파', level: '중급', title: '전면 압박(프레스) 상대로 공 운반',
@@ -66,7 +66,7 @@ window.TIPS = [
       ['뚫으면 숫자 우위', '프레스를 뚫으면 4대3, 3대2가 된다. 바로 공격!']
     ],
     remember: '코너 피하고, 두 명 붙기 전에 패스, 뚫으면 바로 공격.',
-    drills: ['pace', 'hesi', 'pivot'], patterns: ['pb-221', 'pb-reverse', 'pb-man'], q: ['프레스 브레이크 개인 요령', 'how to beat full court press']
+    drills: ['k-slow-fast', 'k-pace6', 'm-hesi4', 'pivot'], patterns: ['pb-221', 'pb-reverse', 'pb-man'], q: ['프레스 브레이크 개인 요령', 'how to beat full court press']
   },
 
   /* ---------- 속공 ---------- */
@@ -81,7 +81,7 @@ window.TIPS = [
       ['드리블보다 패스가 빠르다', '앞에 비어 있는 동료가 있으면 패스. 공이 사람보다 빠르다.']
     ],
     remember: '넓게, 빠르게, 공보다 앞서서.',
-    drills: ['outlet', 'chestpass'], patterns: ['fb-3lane'], q: ['속공 3레인', 'fast break three lanes']
+    drills: ['k-fastbreak-moves', 'chestpass'], patterns: ['fb-3lane'], q: ['속공 3레인', 'fast break three lanes']
   },
   {
     id: 't-2v1', cat: '속공', level: '중급', title: '2대1 속공',
@@ -107,7 +107,7 @@ window.TIPS = [
       ['서두르지 않기', '3대2는 패스 2번이면 노마크가 생긴다. 무리한 레이업보다 노마크 찾기.']
     ],
     remember: '가운데 멈춤 → 윙 → 반대 윙/골밑. 패스 두 번이면 노마크.',
-    drills: ['chestpass', 'catchshoot'], patterns: ['fb-3v2'], q: ['3대2 속공', '3 on 2 fast break']
+    drills: ['chestpass', 'm-sg-drill'], patterns: ['fb-3v2'], q: ['3대2 속공', '3 on 2 fast break']
   },
   {
     id: 't-transd', cat: '속공', level: '중급', title: '속공 수비 (백코트)',
@@ -147,7 +147,7 @@ window.TIPS = [
       ['동료는 빨리 줘야 한다', '스위치 직후 3~4초가 기회. 상대가 다시 바꾸기 전에 공을 넣는다.']
     ],
     remember: '실하고 손 들고, 받으면 드리블 없이 바로.',
-    drills: ['dropstep', 'hook', 'powerlayup'], q: ['미스매치 포스트업', 'how to punish small defender mismatch']
+    drills: ['k-forward-finish5', 'm-pro-hop'], q: ['미스매치 포스트업', 'how to punish small defender mismatch']
   },
   {
     id: 't-mm-big', cat: '미스매치', level: '중급', title: '큰 수비가 나를 막을 때 (가드)',
@@ -160,7 +160,7 @@ window.TIPS = [
       ['스텝백도 좋은 선택', '큰 수비는 뒤로 물러난 나를 따라오기 늦다.']
     ],
     remember: '넓게 벌리고, 좌우로 흔들고, 멀리서 시작.',
-    drills: ['hesi', 'crossover', 'stepback', 'floater'], q: ['빅맨 상대로 1대1', 'attack big man on switch guard']
+    drills: ['m-hesi4', 'crossover', 'k-space5', 'm-small-guard5'], q: ['빅맨 상대로 1대1', 'attack big man on switch guard']
   },
   {
     id: 't-mm-find', cat: '미스매치', level: '고급', title: '미스매치를 팀이 찾아 쓰는 법',
@@ -201,7 +201,7 @@ window.TIPS = [
       ['언더 (스크린 뒤로 돌아감)', '수비가 스크린 아래로 가면 스크린 바로 뒤에서 3점.']
     ],
     remember: '드롭이면 점퍼, 헤지면 롤맨, 스위치면 미스매치, 트랩이면 빨리 패스.',
-    drills: ['pnrpass', 'pullup', 'floater'], patterns: ['pnr', 'pnp', 'horns'], q: ['픽앤롤 수비 읽기', 'pick and roll reads drop hedge switch blitz']
+    drills: ['m-screen-use', 'm-midrange', 'm-small-guard5'], patterns: ['pnr', 'pnp', 'horns'], q: ['픽앤롤 수비 읽기', 'pick and roll reads drop hedge switch blitz']
   },
   {
     id: 't-screener', cat: '픽앤롤', level: '중급', title: '스크리너: 잘 거는 법',
@@ -214,7 +214,7 @@ window.TIPS = [
       ['롤할 때 손을 든다', '골밑으로 가며 손으로 타깃을 보여준다. 공을 보며 달린다.']
     ],
     remember: '각도 맞추고, 멈춰 서고, 지나간 뒤 롤.',
-    drills: ['dropstep', 'pnrpass'], patterns: ['pnr', 'pnp'], q: ['스크린 거는 법', 'how to set a good screen']
+    drills: ['k-forward-finish5', 'm-screen-use'], patterns: ['pnr', 'pnp'], q: ['스크린 거는 법', 'how to set a good screen']
   },
   {
     id: 't-pnr-def', cat: '픽앤롤', level: '중급', title: '픽앤롤 수비 기본',
@@ -255,7 +255,7 @@ window.TIPS = [
       ['스크리너도 기회', '내 수비와 스크리너 수비가 둘 다 나를 따라오면 스크리너가 빈다 → 패스.']
     ],
     remember: '끌고 가서, 수비 위치 보고 컬·팝·플레어.',
-    drills: ['curl'], patterns: ['ucla'], q: ['오프스크린 읽기', 'reading off ball screens curl flare']
+    drills: ['m-screen-use'], patterns: ['ucla'], q: ['오프스크린 읽기', 'reading off ball screens curl flare']
   },
 
   /* ---------- 수비 ---------- */
@@ -339,7 +339,7 @@ window.TIPS = [
       ['숨을 길게 내쉰다', '자유투 전 4초 들이쉬고 6초 내쉬기. 심장이 느려진다.']
     ],
     remember: '루틴, 쉬운 슛, 폼만 생각.',
-    drills: ['freethrow', 'formshot'], q: ['슛 슬럼프 극복', 'shooting slump confidence tips']
+    drills: ['k-shot-setup', 'formshot'], q: ['슛 슬럼프 극복', 'shooting slump confidence tips']
   },
   {
     id: 't-stamina', cat: '경기 운영', level: '초급', title: '동호회 경기 체력 관리',
@@ -352,6 +352,6 @@ window.TIPS = [
       ['평소 인터벌 달리기', '30초 전력 + 30초 걷기 × 8회를 일주일 2번이면 후반이 달라진다.']
     ],
     remember: '아낄 땐 걷고, 물 자주, 평소 인터벌.',
-    drills: ['fatigue', 'ladder'], q: ['농구 체력 관리', 'basketball conditioning tips amateur']
+    drills: ['m-sg-drill', 'm-burst-step'], q: ['농구 체력 관리', 'basketball conditioning tips amateur']
   }
 ];

@@ -244,6 +244,16 @@ html,body{font-size:17px}
 .tile:active{transform:scale(.97)}
 .cathead{display:flex;align-items:center;gap:12px;margin-top:10px}
 .cathead b{font-size:20px}
+.coaches{display:grid;gap:10px}
+@media (min-width:640px){.coaches{grid-template-columns:1fr 1fr}}
+.coachcard{padding:12px;display:flex;flex-direction:column;gap:10px}
+.cc-main{border:0;background:none;text-align:left;padding:0;display:flex;flex-direction:column;gap:2px}
+.cc-main b{font-size:18px}
+.cc-main small{color:var(--acc);font-size:14px;font-weight:700}
+.cc-links{display:flex;gap:8px}
+.coachbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--acc-soft);border-radius:12px;padding:8px 12px;margin:0 0 10px}
+.coachbar span{flex:1;min-width:150px}
+.tag.coach{background:var(--acc-soft);color:var(--acc);font-weight:700}
 .row.basic{gap:8px}
 .row.basic .btn{flex:1;padding:13px 8px;font-size:16px}
 .row.basic .bigpp{flex:1.6}
@@ -440,7 +450,7 @@ html,body{font-size:17px}
   <a href="#/log" data-k="log"><b>📅</b>기록</a>
 </nav>
 <script src="drills.js"></script>
-<script src="drills2.js"></script>
+<script src="coach.js"></script>
 <script src="tips.js"></script>
 <script src="tips-ui.js"></script>
 <script src="patterns.js"></script>
@@ -487,6 +497,9 @@ var vdb=(function(){
 
 function allDrills(){return DRILLS.concat(S.custom)}
 function drill(id){return allDrills().filter(function(d){return d.id===id})[0]}
+/* 내가 넣은 영상이 먼저, 없으면 코치님 영상 */
+function mediaOf(d){return S.media[d.id]||(d.yt?{type:'yt',id:d.yt,start:0,tall:true,coach:true}:null)}
+function coachTag(d){var c=d.coach&&COACHES[d.coach];return c?'<span class="tag coach">🎬 '+esc(c.name)+'</span>':''}
 
 /* ================= 유튜브 ================= */
 function parseYT(url){
@@ -547,7 +560,9 @@ function makeYTPlayer(el,m){
 }
 
 /* ================= 화면 ================= */
-var view={cat:'전체',lv:'전체',q:''};
+var view={cat:'전체',lv:'전체',q:'',coach:'전체'};
+var COACH_F={'전체':'모든 영상','kim':'🎬 김재현 코치','ko':'🎬 고민기 코치','basic':'📘 기본기'};
+function coachOk(d){var c=view.coach;return c==='전체'||(c==='basic'?!d.coach&&!d.custom:d.coach===c)}
 function route(){
   stopPlayer();releaseWake();stopTimer();if(typeof pvStop==='function'){pvStop();stopAnim()}PV=null;PE=null;stopCompare();$('#app').onclick=null;
   var h=location.hash.replace(/^#/,'')||'/';
@@ -575,7 +590,7 @@ function card(d){
     '<div class="row"><span class="nm">'+esc(d.name)+'</span>'+''+'</div>'+
     '<div class="sm">'+esc(d.summary)+'</div>'+
     '<div class="row"><span class="tag">'+esc(d.cat)+'</span><span class="tag lv-'+esc(d.level)+'">'+esc(d.level)+'</span>'+(d.time?'<span class="tag">⏱ '+esc(d.time)+'</span>':'')+
-    (S.media[d.id]?'<span class="tag vid">'+(S.media[d.id].type==='local'?'📱 내 영상':'▶ 영상')+'</span>':'')+(d.custom?'<span class="tag">내가 만든</span>':'')+'</div></a>';
+    coachTag(d)+(S.media[d.id]?'<span class="tag vid">'+(S.media[d.id].type==='local'?'📱 내 영상':'▶ 영상')+'</span>':'')+(d.custom?'<span class="tag">내가 만든</span>':'')+'</div></a>';
 }
 function renderList(favOnly){
   var all=allDrills().filter(function(d){return !favOnly||S.fav[d.id]});
@@ -586,20 +601,23 @@ function renderList(favOnly){
   var items=all.filter(function(d){
     if(view.cat!=='전체'&&d.cat!==view.cat) return false;
     if(view.lv!=='전체'&&d.level!==view.lv) return false;
+    if(!coachOk(d)) return false;
     if(q&&(d.name+' '+(d.en||'')+' '+d.summary).toLowerCase().indexOf(q)<0) return false;
     return true;
   }).map(function(d,i){return [d,i]}).sort(function(a,b){
     return (CATS.indexOf(a[0].cat)-CATS.indexOf(b[0].cat))||(LV.indexOf(a[0].level)-LV.indexOf(b[0].level))||(a[1]-b[1]);
   }).map(function(x){return x[0]});
-  var tiles=!favOnly&&view.cat==='전체'&&!q;
+  var tiles=!favOnly&&view.cat==='전체'&&view.coach==='전체'&&!q;
   var recent=(S.recent||[]).map(drill).filter(Boolean).slice(0,4);
   $('#app').innerHTML=
     '<div class="top"><h1>'+(favOnly?'즐겨찾기':'농구 훈련')+'</h1>'+(favOnly?'':'<button class="iconbtn" data-act="srch" aria-label="검색">🔍</button><button class="iconbtn" data-act="add" aria-label="내 훈련 추가">＋</button>')+'</div>'+
     '<div class="wrap">'+(favOnly?'':libTabs('drill'))+
     (!favOnly&&(view.srch||q)?'<input class="search" id="q" placeholder="기술 이름 검색 (예: 레이업, crossover)" value="'+esc(view.q)+'">':'')+
     (tiles?'<div class="tiles">'+CATS.map(function(c){var n=all.filter(function(d){return d.cat===c}).length;return n?'<button class="tile" data-cat="'+c+'"><span>'+(CAT_EMO[c]||'🏀')+'</span><b>'+c+'</b><small>'+n+'개</small></button>':''}).join('')+'</div>'+
+      '<div class="sec"><h3>코치님 영상으로 배우기</h3><div class="coaches">'+Object.keys(COACHES).map(function(k){var c=COACHES[k];return '<div class="card coachcard"><button class="cc-main" data-coach="'+k+'"><b>🎬 '+esc(c.full)+'</b><small>'+all.filter(function(d){return d.coach===k}).length+'개 영상 훈련 보기 ›</small></button><div class="cc-links"><button class="btn sm" data-ext="'+esc(c.yt)+'">▶ 유튜브</button><button class="btn sm" data-ext="'+esc(c.ig)+'">📷 인스타</button></div></div>'}).join('')+'</div></div>'+
       (recent.length?'<div class="sec"><h3>최근에 본 연습</h3><div class="list">'+recent.map(card).join('')+'</div></div>':'')+'</div>'
-    :(!favOnly&&view.cat!=='전체'?'<div class="cathead"><button class="btn sm" data-cat="전체">← 전체 분류</button><b>'+(CAT_EMO[view.cat]||'')+' '+esc(view.cat)+'</b></div>':'')+
+    :(!favOnly&&(view.cat!=='전체'||view.coach!=='전체')?'<div class="cathead"><button class="btn sm" data-act="allcat">← 전체 분류</button><b>'+(view.cat!=='전체'?(CAT_EMO[view.cat]||'')+' '+esc(view.cat):esc(COACH_F[view.coach]))+'</b></div>':'')+
+    (favOnly?'':'<div class="chips">'+Object.keys(COACH_F).map(function(c){return '<button class="chip'+(view.coach===c?' on':'')+'" data-coach="'+c+'">'+COACH_F[c]+'</button>'}).join('')+'</div>')+
     (favOnly?'':'<div class="chips">'+['전체','입문','초급','중급','고급'].map(function(c){return '<button class="chip'+(view.lv===c?' on':'')+'" data-lv="'+c+'">'+(c==='전체'?'모든 난이도':c)+'</button>'}).join('')+'</div>')+
     (items.length?'<div class="list">'+items.map(card).join('')+'</div>':
       '<div class="empty">'+(favOnly&&!all.length?(favPats.length||favTips.length?'즐겨찾기한 훈련이 없어요':'훈련·꿀팁·패턴 화면에서 ☆ 를 누르면 여기에 모여요'):'맞는 훈련이 없어요')+'</div>')+
@@ -610,6 +628,9 @@ function renderList(favOnly){
   if($('#q')) $('#q').addEventListener('input',function(e){view.q=e.target.value;var pos=e.target.selectionStart;renderList(favOnly);var n=$('#q');n.focus();n.setSelectionRange(pos,pos)});
   $$('[data-cat]').forEach(function(b){b.onclick=function(){view.cat=b.dataset.cat;renderList(favOnly)}});
   $$('[data-lv]').forEach(function(b){b.onclick=function(){view.lv=b.dataset.lv;renderList(favOnly)}});
+  $$('[data-coach]').forEach(function(b){b.onclick=function(){view.coach=b.dataset.coach;renderList(favOnly);window.scrollTo(0,0)}});
+  $$('[data-ext]').forEach(function(b){b.onclick=function(){openExternal(b.dataset.ext)}});
+  var ac=$('[data-act=allcat]');if(ac) ac.onclick=function(){view.cat='전체';view.coach='전체';view.lv='전체';renderList(favOnly)};
   var add=$('[data-act=add]');if(add) add.onclick=function(){editDrillSheet(null)};
 }
 
@@ -625,7 +646,7 @@ function renderDrill(id){
     '<button class="iconbtn" data-act="wake" title="화면 켜두기">💡</button>'+
     (D.custom?'<button class="iconbtn" data-act="edit" aria-label="수정">✎</button>':'')+'</div>'+
     '<div class="wrap">'+
-    '<div class="hero"><h2>'+esc(D.name)+'</h2>'+(D.en?'<div class="en">'+esc(D.en)+'</div>':'')+'<p>'+esc(D.summary)+'</p></div>'+
+    '<div class="hero"><h2>'+esc(D.name)+'</h2>'+(D.en?'<div class="en">'+esc(D.en)+'</div>':'')+'<p>'+esc(D.summary)+'</p></div>'+coachBar(D)+
     '<div id="pbox"></div><div id="ctrl"></div>'+
     '<div class="meta"><div><small>난이도</small><span>'+esc(D.level)+'</span></div><div><small>준비물</small><span>'+esc(D.equip||'-')+'</span></div><div><small>시간</small><span>'+esc(D.time||'-')+'</span></div></div>'+
     (D.reps?'<div class="tip"><b>권장 훈련량</b> · '+esc(D.reps)+'</div>':'')+
@@ -646,16 +667,20 @@ function renderDrill(id){
   wireDrill();
   renderPlayer();
 }
+function coachBar(d){
+  var c=d.coach&&COACHES[d.coach];if(!c) return '';
+  return '<div class="coachbar"><span>🎬 <b>'+esc(c.full)+'</b> 영상'+(d.follow?' · 보고 따라해 보기':'')+'</span><button class="btn sm" data-ext="'+esc(c.yt)+'">▶ 채널</button><button class="btn sm" data-ext="'+esc(c.ig)+'">📷 인스타</button></div>';
+}
 function vidButtons(){
   var m=S.media[D.id];
   var h='<button class="btn" data-act="addyt">▶ 유튜브 링크 '+(m&&m.type==='yt'?'바꾸기':'넣기')+'</button><button class="btn" data-act="addlocal">📱 내 폰 영상 '+(m&&m.type==='local'?'바꾸기':'넣기')+'</button>';
   h+='<button class="btn ghost" data-act="search">🔎 유튜브에서 찾기</button>';
-  if(m) h+='<button class="btn ghost" data-act="rmvid" style="color:var(--bad)">영상 빼기</button>';
+  if(m) h+='<button class="btn ghost" data-act="rmvid" style="color:var(--bad)">'+(D.yt?'↺ 코치님 영상으로 되돌리기':'영상 빼기')+'</button>';
   $('#vbtns').innerHTML=h;
 }
 function renderPlayer(){
   stopPlayer();
-  var m=S.media[D.id], box=$('#pbox'), ctrl=$('#ctrl');
+  var m=mediaOf(D), box=$('#pbox'), ctrl=$('#ctrl');
   vidButtons();
   if(!m){
     box.innerHTML='<div class="card novid"><h3>아직 영상이 없어요</h3><p>유튜브에서 이 기술 영상을 찾아 링크를 붙여넣거나, 모아 둔 영상 / 직접 찍은 영상을 폰에서 골라 넣으세요. 넣어 둔 폰 영상은 인터넷 없이도 나와요.</p>'+
@@ -728,6 +753,7 @@ function wireDrill(){
   on('fav',function(){if(S.fav[D.id]) delete S.fav[D.id];else S.fav[D.id]=1;save();this.textContent=S.fav[D.id]?'★':'☆';toast(S.fav[D.id]?'즐겨찾기에 추가':'즐겨찾기에서 뺐어요')});
   on('edit',function(){editDrillSheet(D)});
   on('wake',function(){toggleWake(this)});
+  $$('[data-ext]').forEach(function(b){b.onclick=function(){openExternal(b.dataset.ext)}});
   $$('[data-step]').forEach(function(b){b.onclick=function(){var i=b.dataset.step;doneSteps[i]=!doneSteps[i];b.closest('li').classList.toggle('done',doneSteps[i])}});
   $$('[data-goto]').forEach(function(b){
     var i=b.dataset.goto;
@@ -757,12 +783,12 @@ document.addEventListener('click',function(e){
     if(a==='search') ytSearchSheet();
     else if(a==='addyt') ytSheet();
     else if(a==='addlocal') pickLocal();
-    else if(a==='rmvid') confirmSheet('이 훈련에서 영상을 뺄까요?',function(){var m=S.media[D.id];if(m&&m.type==='local') vdb.del(D.id);delete S.media[D.id];save();renderPlayer()});
-    else if(a==='ytapp'){var m=S.media[D.id];m&&openExternal('https://www.youtube.com/watch?v='+m.id+'&t='+Math.floor(m.start||0)+'s')}
+    else if(a==='rmvid') confirmSheet(D.yt?'내가 넣은 영상을 빼고 코치님 영상으로 되돌릴까요?':'이 훈련에서 영상을 뺄까요?',function(){var m=S.media[D.id];if(m&&m.type==='local') vdb.del(D.id);delete S.media[D.id];save();renderPlayer()});
+    else if(a==='ytapp'){var m=mediaOf(D);m&&openExternal('https://www.youtube.com/watch?v='+m.id+'&t='+Math.floor(m.start||0)+'s')}
   });
 
 /* ---------- 한 단계씩 따라하기 (큰 글씨 전체 화면) ---------- */
-var CAT_EMO={'드리블':'🏀','슈팅':'🎯','레이업':'🏃','패스':'🤝','풋워크':'👟','수비':'🛡️','포스트':'💪','리바운드':'🙌'};
+var CAT_EMO={'따라해 보기':'🎬','드리블':'🏀','슈팅':'🎯','레이업':'🏃','패스':'🤝','풋워크':'👟','수비':'🛡️','포스트':'💪','리바운드':'🙌'};
 function followSteps(){
   var d=D,i=0,o=document.createElement('div');o.className='follow-ov';
   function draw(){
