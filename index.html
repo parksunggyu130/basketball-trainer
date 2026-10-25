@@ -226,6 +226,80 @@ textarea:focus,.inp:focus{border-color:var(--acc)}
 .trem{background:var(--acc-soft);border-radius:14px;padding:12px 14px;margin-top:14px;font-size:17px;font-weight:700}
 .trem small{color:var(--acc)}
 a.chip{text-decoration:none;color:inherit}
+/* ---------- 어린이 모드 ---------- */
+body.kid{font-size:18px}
+.kidbtn{width:auto;padding:0 10px;font-size:20px}
+.kwrap{padding-top:calc(14px + env(safe-area-inset-top))}
+.khero{background:var(--acc);color:#fff;border-radius:22px;padding:18px;margin-bottom:6px}
+.ktitle{font-size:26px;font-weight:900;letter-spacing:-.5px}
+.kstat{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.kstat span{background:rgba(255,255,255,.22);border-radius:999px;padding:4px 12px;font-weight:800;font-size:17px}
+.kh{font-size:24px;margin:18px 0 8px;display:flex;align-items:baseline;gap:8px}
+.kh small{font-size:17px;color:var(--sub)}
+.kcat{font-size:20px;margin:22px 0 8px}
+.kcat small{font-size:15px;color:var(--sub);font-weight:600}
+.kbar{height:14px;background:var(--chip);border-radius:999px;overflow:hidden;margin:6px 0}
+.kbar i{display:block;height:100%;background:var(--good);border-radius:999px;transition:width .3s}
+.klist{display:grid;gap:10px}
+@media (min-width:640px){.klist{grid-template-columns:1fr 1fr}}
+.kcard{display:flex;align-items:center;gap:14px;background:var(--card);border:2px solid var(--line);border-radius:20px;padding:16px;text-decoration:none;color:inherit;min-height:84px}
+.kcard.done{border-color:var(--good);background:var(--good-soft)}
+.kemo{font-size:40px;line-height:1}
+.kname{flex:1;font-size:21px;font-weight:800;display:flex;flex-direction:column}
+.kname small{font-size:15px;color:var(--sub);font-weight:600}
+.kchk{font-size:28px;color:var(--acc)}
+.kdone{background:var(--good);color:#fff;font-size:22px;font-weight:900;text-align:center;border-radius:20px;padding:18px;margin-top:14px}
+.knote{color:var(--sub);text-align:center;font-size:17px}
+.ktop{display:flex;align-items:center;gap:10px}
+.kback{border:0;background:var(--chip);width:56px;height:56px;border-radius:16px;font-size:26px;flex:none}
+.ktitle2{font-size:24px;font-weight:900;letter-spacing:-.4px}
+.ksum{font-size:18px;margin:10px 0}
+.kvid{background:#000;border-radius:18px;overflow:hidden;aspect-ratio:16/9}
+.kvid video,.kvid iframe,.kvid>div{width:100%;height:100%;border:0;display:block}
+.kspeed{display:flex;gap:8px;margin-top:8px}
+.kspeed button,.kstepbtn button{flex:1;border:0;background:var(--chip);border-radius:16px;padding:14px;font-size:19px;font-weight:800}
+.kspeed button.on{background:var(--acc);color:#fff}
+.knovid{background:var(--acc-soft);border-radius:18px;padding:16px;font-size:17px}
+.kstep{background:var(--card);border:2px solid var(--acc);border-radius:22px;padding:18px;min-height:150px}
+.kstepn{color:var(--acc);font-weight:900;font-size:18px}
+.kstept{font-size:22px;line-height:1.55;font-weight:600;margin-top:6px}
+.kstepbtn{display:flex;gap:10px;margin-top:10px}
+.kstepbtn button.pri{background:var(--acc);color:#fff}
+.kstepbtn button:disabled{opacity:.4}
+.kchecks{margin:0;padding-left:24px;font-size:18px;display:grid;gap:6px}
+.kcount{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:16px;text-align:center;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.knum{grid-column:1/-1;font-size:64px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1}
+.kcount .kbar{grid-column:1/-1}
+.kplus{border:0;background:var(--acc);color:#fff;border-radius:20px;font-size:34px;font-weight:900;padding:22px}
+.kminus{border:0;background:var(--chip);border-radius:20px;font-size:22px;padding:22px 16px}
+.kfinish{width:100%;border:0;background:var(--good);color:#fff;border-radius:20px;font-size:24px;font-weight:900;padding:20px;margin-top:16px}
+.kfeel{display:grid;gap:10px}
+.kfeel button{border:2px solid var(--line);background:var(--card);border-radius:18px;font-size:24px;padding:16px;font-weight:700}
+.kparty{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px}
+.kparty>div{background:var(--card);border-radius:28px;padding:28px 22px;text-align:center;max-width:360px;width:100%;animation:kpop .35s ease-out}
+.kpe{font-size:84px;line-height:1;animation:kspin 1s ease-out}
+.kparty b{display:block;font-size:34px;font-weight:900;color:var(--acc);margin-top:8px}
+.kparty p{font-size:19px;margin:8px 0 0}
+@keyframes kpop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes kspin{from{transform:rotate(-180deg) scale(.3)}to{transform:none}}
+.klevel{display:flex;gap:14px;align-items:center;background:var(--card);border:2px solid var(--line);border-radius:22px;padding:16px}
+.klevel b{font-size:24px}
+.kbig{font-size:64px;line-height:1}
+.kbadges{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:640px){.kbadges{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.kbadge{background:var(--card);border:2px dashed var(--line);border-radius:18px;padding:12px;text-align:center;opacity:.45;display:flex;flex-direction:column;gap:2px}
+.kbadge.on{opacity:1;border-style:solid;border-color:var(--acc);background:var(--acc-soft)}
+.kbadge span{font-size:36px}
+.kbadge small{font-size:13px;color:var(--sub)}
+.klog{display:grid;gap:8px}
+.klog div{display:grid;grid-template-columns:auto 1fr;column-gap:10px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 12px}
+.klog span{grid-row:span 2;font-size:28px}
+.klog small{color:var(--sub);font-size:14px}
+.kexit{position:relative;overflow:hidden;width:100%;margin-top:30px;background:var(--chip);color:var(--sub);font-size:15px;padding:16px}
+.kexit i{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(232,100,27,.3)}
+.kexit.hold i{width:100%;transition:width 2s linear}
+.kidnav a{font-size:14px;font-weight:700;padding:10px 0}
+.kidnav a b{font-size:28px}
 </style>
 </head>
 <body>
@@ -243,6 +317,7 @@ a.chip{text-decoration:none;color:inherit}
 <script src="patterns.js"></script>
 <script src="patterns-ui.js"></script>
 <script src="compare.js"></script>
+<script src="kid.js"></script>
 <script>
 'use strict';
 var $=function(s,r){return (r||document).querySelector(s)};
@@ -346,6 +421,8 @@ var view={cat:'전체',lv:'전체',q:''};
 function route(){
   stopPlayer();releaseWake();stopTimer();if(typeof pvStop==='function'){pvStop();stopAnim()}PV=null;PE=null;stopCompare();
   var h=location.hash.replace(/^#/,'')||'/';
+  if(S.kid&&S.kid.on){kidRoute(h);window.scrollTo(0,0);return}
+  kidNav(false);
   var m;
   $$('#nav a').forEach(function(a){a.classList.toggle('on',(a.dataset.k==='lib'&&(h==='/'||h==='/tips'||/^\/(d|c|t)\//.test(h)))||(a.dataset.k==='pat'&&/^\/(pat|pj|p\/|pe\/)/.test(h))||(a.dataset.k==='fav'&&h==='/fav')||(a.dataset.k==='log'&&h==='/log'))});
   if((m=h.match(/^\/d\/(.+)$/))) renderDrill(decodeURIComponent(m[1]));
@@ -386,7 +463,7 @@ function renderList(favOnly){
     return (CATS.indexOf(a[0].cat)-CATS.indexOf(b[0].cat))||(LV.indexOf(a[0].level)-LV.indexOf(b[0].level))||(a[1]-b[1]);
   }).map(function(x){return x[0]});
   $('#app').innerHTML=
-    '<div class="top"><h1>'+(favOnly?'즐겨찾기':'농구 훈련')+'</h1>'+(favOnly?'':'<button class="iconbtn" data-act="add" aria-label="내 훈련 추가">＋</button>')+'</div>'+
+    '<div class="top"><h1>'+(favOnly?'즐겨찾기':'농구 훈련')+'</h1>'+(favOnly?'':'<button class="iconbtn kidbtn" data-act="kidon" aria-label="어린이 모드">🧒</button><button class="iconbtn" data-act="add" aria-label="내 훈련 추가">＋</button>')+'</div>'+
     '<div class="wrap">'+(favOnly?'':libTabs('drill'))+'<input class="search" id="q" placeholder="기술 이름 검색 (예: 레이업, crossover)" value="'+esc(view.q)+'">'+
     '<div class="chips">'+cats.map(function(c){return '<button class="chip'+(view.cat===c?' on':'')+'" data-cat="'+c+'">'+c+'</button>'}).join('')+'</div>'+
     '<div class="chips" style="padding-top:0">'+['전체','입문','초급','중급','고급'].map(function(c){return '<button class="chip'+(view.lv===c?' on':'')+'" data-lv="'+c+'">'+(c==='전체'?'모든 난이도':c)+'</button>'}).join('')+'</div>'+
@@ -399,6 +476,7 @@ function renderList(favOnly){
   $$('[data-cat]').forEach(function(b){b.onclick=function(){view.cat=b.dataset.cat;renderList(favOnly)}});
   $$('[data-lv]').forEach(function(b){b.onclick=function(){view.lv=b.dataset.lv;renderList(favOnly)}});
   var add=$('[data-act=add]');if(add) add.onclick=function(){editDrillSheet(null)};
+  var kb=$('[data-act=kidon]');if(kb) kb.onclick=kidEnter;
 }
 
 /* ---------- 훈련 상세 ---------- */
