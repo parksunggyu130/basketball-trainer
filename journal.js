@@ -76,18 +76,21 @@ function renderTJ(date) {
     '<p class="note" style="text-align:center">쓰는 대로 저장돼요 · ＋ 로 크게 해서 쓰세요 (크게 하면 손가락으로 밀어서 이동)<br>펜으로 쓸 때는 두 손가락으로 밀면 이동해요</p></div>';
   $('[data-f=cond]').value = e.cond || '';
   tjWire(); tjMode(TJ.mode); tjFit();
+  /* 스크롤바가 생기거나 화면 폭이 바뀌면 다시 맞춘다 (오른쪽 잘림 방지) */
+  if (window.ResizeObserver) { var lastW = 0, ro = new ResizeObserver(function () { var el = $('#tjwrap'); if (!el || !TJ) { ro.disconnect(); return } var cw = el.parentNode.clientWidth; if (cw !== lastW) { lastW = cw; tjFit(true) } }); ro.observe($('#tjwrap').parentNode) }
   vdb.get('ink:' + date).then(function (ink) { if (!TJ || TJ.date !== date) return; if (ink) TJ.ink = { p1: ink.p1 || [], p2: ink.p2 || [] }; tjDrawAll() }).catch(function () {});
 }
 function tjFingerLabel() { return tjUi().tjFinger === 'pan' ? '☝️ 손가락: 이동' : '☝️ 손가락: 쓰기' }
 /* 화면 맞춤 배율 × 확대(zoom). 확대하면 일지 칸 안에서 위아래·옆으로 밀어서 본다 */
 function tjFit(keep) {
   var w = $('#tjwrap'), sizer = $('#tjsizer'), inner = $('#tjinner'); if (!w || !inner) return;
-  var avail = w.parentNode.clientWidth;
-  if (!TJ.zoom) TJ.zoom = avail < 560 ? 1.6 : 1; // 폰은 처음부터 크게
+  var cs = getComputedStyle(w.parentNode); // .wrap 의 좌우 여백은 빼고 잰다 (안 빼면 오른쪽이 잘림)
+  var avail = w.parentNode.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (TJ.zoom > 1 ? 4 : 0);
+  if (!TJ.zoom) TJ.zoom = 1;
   /* 세로로 한 줄: 1쪽(운동 내용·피드백) 아래에 2쪽(잘한 점·마음·컨디션) */
   var pw = TJ_W, ph = TJ_H * 2 + 24, old = TJ.s, cx = 0, cy = 0;
   if (keep && old) { cx = (w.scrollLeft + w.clientWidth / 2) / old; cy = (w.scrollTop + w.clientHeight / 2) / old }
-  var s = Math.min(avail, 820) / pw * TJ.zoom; TJ.s = s;
+  var s = Math.floor(Math.min(avail, 820) / pw * TJ.zoom * 1000) / 1000; TJ.s = s;
   inner.style.transform = 'scale(' + s + ')';
   sizer.style.width = Math.ceil(pw * s) + 'px'; sizer.style.height = Math.ceil(ph * s) + 'px';
   var zoomed = TJ.zoom > 1;
