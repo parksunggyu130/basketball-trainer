@@ -448,7 +448,7 @@ function wireJournalCards(after) {
   $$('[data-jedit]').forEach(function (b) { b.onclick = function () { var j = S.pjournal.filter(function (x) { return String(x.at) === b.dataset.jedit })[0]; if (j) journalSheet(j, j.pid, after) } });
 }
 function journalSheet(j, pid, after) {
-  var e = j || { date: today(), pid: pid || '', where: '', learned: '', good: '', hard: '', next: '', lv: masteryOf(pid) || 1 };
+  var e = j || { date: (location.hash === '#/pj' && jview.day) || today(), pid: pid || '', where: '', learned: '', good: '', hard: '', next: '', lv: masteryOf(pid) || 1 };
   var lv = e.lv;
   sheet('<h3>' + (j ? '일지 고치기' : '📓 배운 패턴 일지') + '</h3>' +
     '<div class="two"><label class="field"><span>날짜</span><input class="inp" type="date" id="jd" value="' + esc(e.date) + '"></label>' +
@@ -474,21 +474,40 @@ function journalSheet(j, pid, after) {
       var del = $('#del', s); if (del) del.onclick = function () { close(); confirmSheet('이 일지를 지울까요?', function () { S.pjournal = S.pjournal.filter(function (x) { return x !== j }); save(); (after || route)() }) };
     });
 }
-var jview = { f: 0 };
+var jview = { f: 0, month: null, day: null };
 function renderJournal() {
   var all = S.pjournal.slice().sort(byDateDesc);
   var learned = {}; all.forEach(function (j) { learned[j.pid] = 1 });
   var pids = Object.keys(learned), mastered = pids.filter(function (id) { return masteryOf(id) === 3 }).length;
-  var list = jview.f ? all.filter(function (j) { return masteryOf(j.pid) === jview.f }) : all;
+  /* 달력: 일지 쓴 날 = 📋 + 개수, 칸 색은 그날 가장 높은 수준 */
+  var mon = jview.month || today().slice(0, 7), y = +mon.slice(0, 4), mo = +mon.slice(5, 7);
+  var byDay = {}; all.forEach(function (j) { (byDay[j.date] = byDay[j.date] || []).push(j) });
+  var nDays = new Date(y, mo, 0).getDate(), lead = new Date(y, mo - 1, 1).getDay(), monDays = 0;
+  var cal = '<div class="tjc-head"><button class="btn" data-jm="-1" aria-label="이전 달">◀</button><b>' + y + '년 ' + mo + '월</b><button class="btn" data-jm="1" aria-label="다음 달">▶</button></div><div class="tjc-grid">' +
+    '일월화수목금토'.split('').map(function (c, i) { return '<span class="tjc-wd' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '') + '">' + c + '</span>' }).join('');
+  for (var i = 0; i < lead; i++) cal += '<span></span>';
+  for (var d = 1; d <= nDays; d++) {
+    var ds = mon + '-' + String(d).padStart(2, '0'), js = byDay[ds] || [], top = js.reduce(function (a, j) { return Math.max(a, j.lv || 1) }, 0);
+    if (js.length) monDays++;
+    cal += '<button class="tjc-d' + (top ? ' pj' + top : '') + (ds === today() ? ' t' : '') + (ds === jview.day ? ' sel' : '') + '" data-jd="' + ds + '"><b>' + d + '</b><span>' + (js.length ? '📋' : '') + '</span><small>' + (js.length > 1 ? js.length + '개' : '') + '</small></button>';
+  }
+  cal += '</div>';
+  var list = all.filter(function (j) { return (jview.day ? j.date === jview.day : j.date.slice(0, 7) === mon) && (!jview.f || masteryOf(j.pid) === jview.f) });
   var h = '<div class="top"><h1>패턴</h1><button class="iconbtn" data-act="jadd" aria-label="일지 쓰기">＋</button></div><div class="wrap">' + patTabs('journal') +
-    '<div class="stats"><div><b>' + pids.length + '</b><small>배운 패턴</small></div><div><b>' + mastered + '</b><small>실전에서 씀</small></div><div><b>' + all.length + '</b><small>일지</small></div></div>' +
+    '<div class="card lcal">' + cal + '<p class="note" style="margin:8px 0 0;text-align:center">' + mo + '월에 <b>' + monDays + '일</b> 패턴을 배웠어요 · 날짜를 누르면 그날 일지만 보여요</p>' +
+    '<div class="tjc-legend" style="justify-content:center;margin-top:6px"><span><i class="m1"></i>처음 배움</span><span><i class="m2"></i>연습 중</span><span><i class="m3"></i>실전에서 씀</span></div></div>' +
+    '<div class="stats" style="margin-top:12px"><div><b>' + pids.length + '</b><small>배운 패턴</small></div><div><b>' + mastered + '</b><small>실전에서 씀</small></div><div><b>' + all.length + '</b><small>일지</small></div></div>' +
     '<div class="chips">' + [0, 1, 2, 3].map(function (n) { return '<button class="chip' + (jview.f === n ? ' on' : '') + '" data-jf="' + n + '">' + (n ? MASTERY[n] : '전체') + '</button>' }).join('') + '</div>';
-  if (!all.length) h += '<div class="empty">아직 일지가 없어요.<br>패턴을 배운 날 <b>＋</b>를 눌러 적어보세요.<br><br><span class="note">배운 패턴이 목록에 없으면 📋 패턴 목록에서 ＋로 먼저 그리세요.</span></div>';
-  else if (!list.length) h += '<div class="empty">이 수준의 패턴이 없어요</div>';
-  var last = '';
+  if (jview.day) h += '<div class="lday"><b>' + jview.day.slice(5).replace('-', '월 ') + '일</b><span>' + (byDay[jview.day] || []).length + '개</span><button class="btn sm pri" data-act="jaddday">＋ 이 날 일지</button><button class="btn sm" data-jd="' + jview.day + '">전체 보기</button></div>';
+  if (!all.length) h += '<div class="empty">아직 일지가 없어요.<br>패턴을 배운 날 <b>＋</b>를 눌러 적어보세요.<br><br><span class="note">배운 패턴이 목록에 없으면 📋 패턴 목록에서 먼저 그리세요.</span></div>';
+  else if (!list.length) h += '<div class="empty">' + (jview.day ? '이 날은 패턴 일지가 없어요' : jview.f ? '이 수준의 패턴이 없어요' : mo + '월에는 패턴 일지가 없어요') + '</div>';
+  var last = jview.day || '';
   list.forEach(function (j) { if (j.date !== last) { last = j.date; h += '<div class="day">' + j.date + (j.date === today() ? ' (오늘)' : '') + '</div>' } h += journalCard(j) });
   $('#app').innerHTML = h + '<div style="height:16px"></div></div>';
   $('[data-act=jadd]').onclick = function () { journalSheet(null, null, renderJournal) };
+  var jd = $('[data-act=jaddday]'); if (jd) jd.onclick = function () { journalSheet(null, null, renderJournal) };
   $$('[data-jf]').forEach(function (b) { b.onclick = function () { jview.f = +b.dataset.jf; renderJournal() } });
+  $$('[data-jd]').forEach(function (b) { b.onclick = function () { jview.day = jview.day === b.dataset.jd ? null : b.dataset.jd; renderJournal() } });
+  $$('[data-jm]').forEach(function (b) { b.onclick = function () { var dt = new Date(y, mo - 1 + +b.dataset.jm, 1); jview.month = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0'); jview.day = null; renderJournal() } });
   wireJournalCards(renderJournal);
 }
