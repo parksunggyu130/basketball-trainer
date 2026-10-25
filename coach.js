@@ -2,6 +2,9 @@
    yt = 유튜브 영상 ID (앱 안에서 재생, 내려받지 않음). coach = COACHES 키.
    summary 는 영상 설명글을 바탕으로, steps/checks/mistakes 는 영상 제목에 맞춰 일반적인 연습 요령으로 정리한 것.
    정확한 동작은 영상 속 코치님 시범이 기준. */
+/* 선수(학생)가 시범을 보인 영상: 훈련 분류 대신 '따라해 보기'로 (영상 썸네일로 확인한 목록). 앱에서 직접 옮기거나 되돌릴 수도 있음 (S.demo) */
+window.DEMO_YT = ["MZybey5Egco","SKzFSSjSPSk","Z8r4_EAnf6o","O4jQ5Zn-d3g","zHQVzANeBz4","KK9m2nVCT3I","08oDyG_6l3s","MkxAMq4QoN4","Ix5mO35VYsU","PS3IfvITWYY","PLHDRMJ07-k","BmarVZ7LwEc","KyyE7AkHv-U","WiajdciA208","QHSEGlgWaD8","WABiBOk-ybE","1XxZpUrREp8","Unr0aPKC2fE","9kLjjTdU9aI","0PWGAtTz1Os","IK_IT13YAUE","WLBvuYKqKUU","iXXqnZ2-KJQ","bpgbfAiXzmU","czE69A80Jtg","dKYgKnmjRZY","axnkYY98_lo","IYOsphfX5xk","8N4IsE-0tJY","PyvwpRgau1A","Ejhx4z6QaWs","n3PEvZ6KvJg","qZjl-syCyIY","trxDyA5vISk","PugMNL5E0vM","BuLjuix_1Hw"];
+
 window.COACHES = {
   kim: { name: '김재현', full: '김재현 코치', ch: '김재현 Jaehyeon', yt: 'https://www.youtube.com/@jaehyeoniiiii', ig: 'https://www.instagram.com/jaehyeoniiiii' },
   ko: { name: '고민기', full: '고민기 코치', ch: '농구는 고코치', yt: 'https://www.youtube.com/@minki_ko', ig: 'https://www.instagram.com/minki_ko' }

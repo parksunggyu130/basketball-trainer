@@ -1,6 +1,6 @@
 // 농구장에서 인터넷 없이도 열리도록 앱 파일을 캐시. 앱 파일은 캐시 먼저 보여주고 뒤에서 새로 받아둔다.
 // 뼈대 인식(MediaPipe) 파일은 처음 한 번 받으면 캐시에서 쓴다.
-var CACHE = 'bbtrain-v25';
+var CACHE = 'bbtrain-v26';
 var RUNTIME = 'bbtrain-rt-v1';
 var CORE = ['./', './index.html', './drills.js', './coach.js', './coach2.js', './tips.js', './tips-ui.js', './patterns.js', './patterns-ui.js', './compare.js', './journal.js', './help.js', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
