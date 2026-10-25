@@ -380,6 +380,9 @@ html,body{font-size:17px}
 .tjc-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
 .tjc-legend i.w{background:var(--acc-soft);border:1px solid var(--acc)}
 .tjc-legend i.t{border:2px solid var(--good)}
+.lcal{padding:12px;margin-top:4px}
+.tjc-d.lc.on{background:var(--good-soft);border-color:var(--good)}
+.tjc-d.lc small{font-size:11px;color:var(--good);letter-spacing:0;font-weight:700}
 </style>
 </head>
 <body>
@@ -844,16 +847,25 @@ function renderLog(){
   while(true){var k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');if(!days[k]) break;streak++;d.setDate(d.getDate()-1)}
   var weekAgo=Date.now()-7*864e5,wk=logs.filter(function(l){return l.at>=weekAgo});
   var wMin=wk.reduce(function(a,l){return a+(l.min||0)},0);
-  var strip='';
-  for(var i=6;i>=0;i--){var dt=tjShift(today(),-i),dd=new Date(dt+'T12:00:00');
-    strip+='<a class="wk'+(days[dt]?' on':'')+(i===0?' td':'')+'" href="#/tj/'+dt+'"><small>'+'일월화수목금토'[dd.getDay()]+'</small><b>'+(days[dt]?'✓':dd.getDate())+'</b></a>'}
+  /* 달력: 연습한 날 = 초록 + 횟수, 일지 쓴 날 = 📓, 날짜를 누르면 그날 기록만 */
+  var lv=lview, mon=lv.month||today().slice(0,7), y=+mon.slice(0,4), mo=+mon.slice(5,7);
+  var nDays=new Date(y,mo,0).getDate(), lead=new Date(y,mo-1,1).getDay(), monDays=0, tjs=S.tj||{};
+  var cal='<div class="tjc-head"><button class="btn" data-lm="-1" aria-label="이전 달">◀</button><b>'+y+'년 '+mo+'월</b><button class="btn" data-lm="1" aria-label="다음 달">▶</button></div><div class="tjc-grid">'+
+    '일월화수목금토'.split('').map(function(c,i){return '<span class="tjc-wd'+(i===0?' sun':i===6?' sat':'')+'">'+c+'</span>'}).join('');
+  for(var i=0;i<lead;i++) cal+='<span></span>';
+  for(var dn=1;dn<=nDays;dn++){var ds=mon+'-'+String(dn).padStart(2,'0'),n=days[ds]||0;if(n) monDays++;
+    cal+='<button class="tjc-d lc'+(n?' on':'')+(ds===today()?' t':'')+(ds===lv.day?' sel':'')+'" data-ld="'+ds+'"><b>'+dn+'</b><span>'+(n?'🏀':'')+'</span><small>'+(n>1?n+'개':'')+(tjHas(tjs[ds])?'📓':'')+'</small></button>'}
+  cal+='</div>';
+  var shown=logs.filter(function(l){return lv.day?l.date===lv.day:l.date.slice(0,7)===mon});
   function dayName(dt){if(dt===today()) return '오늘';if(dt===tjShift(today(),-1)) return '어제';var x=new Date(dt+'T12:00:00');return (x.getMonth()+1)+'월 '+x.getDate()+'일 ('+'일월화수목금토'[x.getDay()]+')'}
   var html='<div class="top"><h1>훈련 기록</h1></div><div class="wrap">'+
-    '<div class="weekstrip">'+strip+'</div>'+
+    '<div class="card lcal">'+cal+'<p class="note" style="margin:8px 0 0;text-align:center">'+mo+'월에 <b>'+monDays+'일</b> 연습했어요 · 날짜를 누르면 그날 기록만 보여요</p></div>'+
     '<div class="bigstats"><div><span>🔥</span><b>'+streak+'일</b><small>연속 연습</small></div><div><span>🏀</span><b>'+wk.length+'번</b><small>이번 7일</small></div><div><span>⏱</span><b>'+wMin+'분</b><small>이번 7일</small></div></div>';
   if(!logs.length) html+='<div class="empty" style="font-size:18px">아직 기록이 없어요.<br>연습하고 <b>✓ 훈련 완료 기록하기</b>를 누르면 여기에 쌓여요.<br><br><a class="btn pri" href="#/" style="text-decoration:none;display:inline-block;padding:14px 22px">🏀 연습하러 가기</a></div>';
-  var last='';
-  logs.forEach(function(l){
+  if(logs.length&&lv.day) html+='<div class="lday"><b>'+dayName(lv.day)+'</b><span>'+(days[lv.day]||0)+'개</span><a class="btn sm" href="#/tj/'+lv.day+'">📓 이 날 일지</a><button class="btn sm" data-ld="'+lv.day+'">전체 보기</button></div>'+(shown.length?'':'<div class="empty">이 날은 연습 기록이 없어요</div>');
+  else if(logs.length&&!shown.length) html+='<div class="empty">'+mo+'월에는 연습 기록이 없어요</div>';
+  var last=lv.day||'';
+  shown.forEach(function(l){
     if(l.date!==last){last=l.date;html+='<div class="lday"><b>'+dayName(l.date)+'</b><span>'+days[l.date]+'개</span><a class="btn sm" href="#/tj/'+l.date+'">📓 이 날 일지</a></div>'}
     html+='<div class="card lcard"><span class="lfeel">'+['','😣','🙂','😎'][l.feel||2]+'</span><div class="lbody"><a href="#/d/'+encodeURIComponent(l.id)+'">'+esc(l.name)+'</a>'+
       '<div class="lchips">'+[l.reps?'🔢 '+l.reps+'회':'',l.sets?l.sets+'세트':'',l.min?'⏱ '+l.min+'분':'',l.chkN?'✔ '+l.chk+'/'+l.chkN:''].filter(Boolean).map(function(x){return '<span>'+x+'</span>'}).join('')+'</div>'+
@@ -862,7 +874,10 @@ function renderLog(){
   html+='</div>';
   $('#app').innerHTML=html;
   $$('[data-del]').forEach(function(b){b.onclick=function(){confirmSheet('이 기록을 지울까요?',function(){S.logs=S.logs.filter(function(l){return String(l.at)!==b.dataset.del});save();renderLog()})}});
+  $$('[data-ld]').forEach(function(b){b.onclick=function(){lview.day=lview.day===b.dataset.ld?null:b.dataset.ld;renderLog()}});
+  $$('[data-lm]').forEach(function(b){b.onclick=function(){var dt=new Date(y,mo-1+ +b.dataset.lm,1);lview.month=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');lview.day=null;renderLog()}});
 }
+var lview={month:null,day:null};
 
 /* ---------- 내 훈련 추가/수정 ---------- */
 function editDrillSheet(d){
