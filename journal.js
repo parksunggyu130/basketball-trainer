@@ -72,7 +72,6 @@ function renderTJ(date) {
     '<div class="tj-zoom"><button class="btn" data-tj="zout" aria-label="작게">－</button><button class="btn sm" data-tj="zfit" id="tjzl">100%</button><button class="btn" data-tj="zin" aria-label="크게">＋</button></div></div>' +
     '<div class="tj-pen"' + (TJ.mode === 'pen' ? '' : ' hidden') + '><button class="btn sm" data-tj="finger" id="tjfinger">' + tjFingerLabel() + '</button>' + TJ_PENS.map(function (c) { return '<button class="tj-c' + (c === TJ.color ? ' on' : '') + '" data-tjc="' + c + '" style="background:' + c + '" aria-label="펜 색"></button>' }).join('') +
     '<button class="btn sm" data-tj="thick">' + (TJ.width > 3 ? '굵게' : '얇게') + '</button><button class="btn sm" data-tjs="o">🔵 공격</button><button class="btn sm" data-tjs="x">🔴 수비</button><button class="btn sm" data-tjs="b">🟠 공</button><button class="btn sm" data-tj="eraser">🧽 지우개</button><button class="btn sm" data-tj="undo">↶</button><button class="btn sm" data-tj="clear">🗑</button></div></div>' +
-    '<div class="seg wide tj-tabs"><button data-tjp="1">1쪽 · 운동 내용</button><button data-tjp="2">2쪽 · 잘한 점·마음</button></div>' +
     '<div class="tj-wrap" id="tjwrap"><div class="tj-sizer" id="tjsizer"><div class="tj-inner" id="tjinner">' + tjPage1(date, e) + tjPage2(e) + '</div></div></div>' +
     '<p class="note" style="text-align:center">쓰는 대로 저장돼요 · ＋ 로 크게 해서 쓰세요 (크게 하면 손가락으로 밀어서 이동)<br>펜으로 쓸 때는 두 손가락으로 밀면 이동해요</p></div>';
   $('[data-f=cond]').value = e.cond || '';
@@ -85,25 +84,20 @@ function tjFit(keep) {
   var w = $('#tjwrap'), sizer = $('#tjsizer'), inner = $('#tjinner'); if (!w || !inner) return;
   var avail = w.parentNode.clientWidth;
   if (!TJ.zoom) TJ.zoom = avail < 560 ? 1.6 : 1; // 폰은 처음부터 크게
-  var two = avail >= 980 && TJ.zoom === 1;
-  inner.classList.toggle('two', two);
-  $('.tj-tabs').style.display = two ? 'none' : '';
-  $('#tjp1').style.display = two || TJ.page === 1 ? '' : 'none';
-  $('#tjp2').style.display = two || TJ.page === 2 ? '' : 'none';
-  $$('[data-tjp]').forEach(function (b) { b.classList.toggle('on', +b.dataset.tjp === TJ.page) });
-  var pw = two ? TJ_W * 2 + 24 : TJ_W, old = TJ.s, cx = 0, cy = 0;
+  /* 세로로 한 줄: 1쪽(운동 내용·피드백) 아래에 2쪽(잘한 점·마음·컨디션) */
+  var pw = TJ_W, ph = TJ_H * 2 + 24, old = TJ.s, cx = 0, cy = 0;
   if (keep && old) { cx = (w.scrollLeft + w.clientWidth / 2) / old; cy = (w.scrollTop + w.clientHeight / 2) / old }
-  var s = avail / pw * TJ.zoom; TJ.s = s;
+  var s = Math.min(avail, 820) / pw * TJ.zoom; TJ.s = s;
   inner.style.transform = 'scale(' + s + ')';
-  sizer.style.width = Math.ceil(pw * s) + 'px'; sizer.style.height = Math.ceil(TJ_H * s) + 'px';
+  sizer.style.width = Math.ceil(pw * s) + 'px'; sizer.style.height = Math.ceil(ph * s) + 'px';
   var zoomed = TJ.zoom > 1;
   w.classList.toggle('zoomed', zoomed);
   if (zoomed) {
     var top = $('.top'), tools = $('.tj-tools'), nav = $('#nav');
     tools.style.top = (top ? top.offsetHeight : 0) + 'px';
     var h = window.innerHeight - (top ? top.offsetHeight : 0) - tools.offsetHeight - (nav ? nav.offsetHeight : 0) - 12;
-    w.style.height = Math.max(280, Math.min(h, TJ_H * s)) + 'px';
-  } else w.style.height = Math.ceil(TJ_H * s) + 'px';
+    w.style.height = Math.max(280, Math.min(h, ph * s)) + 'px';
+  } else w.style.height = Math.ceil(ph * s) + 'px';
   if (keep && old) { w.scrollLeft = cx * s - w.clientWidth / 2; w.scrollTop = cy * s - w.clientHeight / 2 }
   var zl = $('#tjzl'); if (zl) zl.textContent = Math.round(TJ.zoom * 100) + '%';
 }
