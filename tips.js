@@ -66,7 +66,7 @@ window.TIPS = [
       ['뚫으면 숫자 우위', '프레스를 뚫으면 4대3, 3대2가 된다. 바로 공격!']
     ],
     remember: '코너 피하고, 두 명 붙기 전에 패스, 뚫으면 바로 공격.',
-    drills: ['pace', 'hesi', 'pivot'], q: ['프레스 브레이크 개인 요령', 'how to beat full court press']
+    drills: ['pace', 'hesi', 'pivot'], patterns: ['pb-221', 'pb-reverse', 'pb-man'], q: ['프레스 브레이크 개인 요령', 'how to beat full court press']
   },
 
   /* ---------- 속공 ---------- */
