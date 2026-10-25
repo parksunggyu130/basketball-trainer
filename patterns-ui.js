@@ -288,14 +288,16 @@ var PE = null;
 function renderPatternEdit(id) {
   var p = S.patterns.filter(function (x) { return x.id === id })[0];
   if (!p) { location.hash = '#/pat'; return }
-  PE = { p: p, i: 0, tool: 'move', drag: null, sel: null };
+  PE = { p: p, i: 0, tool: 'move', drag: null, sel: null, zoom: (S.ui && S.ui.peZoom) || 1, ptrs: {}, pan: null };
   $('#app').innerHTML =
     '<div class="top"><button class="iconbtn" data-act="back" aria-label="완료">←</button><input class="inp" id="pname" value="' + esc(p.name) + '" style="flex:1;font-weight:700" aria-label="패턴 이름">' +
     '<button class="iconbtn" data-act="pview" title="보기">▶</button></div>' +
     '<div class="wrap">' +
     '<div class="seg wide" id="tools"><button data-tool="move" class="on">✋ 선수 옮기기</button><button data-tool="ball">🏀 공 주기</button><button data-tool="screen">┳ 스크린</button></div>' +
     '<p class="note" id="toolhelp" style="margin:6px 0"></p>' +
-    '<div class="court">' + courtSvg('court', ' edit', isFull(p)) + '</div>' + legendHtml(p.def !== 'none') +
+    '<div class="pe-zbar"><span class="note">코트 크기</span><div class="tj-zoom"><button class="btn" data-pz="-1" aria-label="작게">－</button><button class="btn sm" data-pz="0" id="pezl">100%</button><button class="btn" data-pz="1" aria-label="크게">＋</button></div></div>' +
+    '<div class="court pe-wrap" id="pewrap">' + courtSvg('court', ' edit', isFull(p)) + '</div>' +
+    '<p class="note" id="pehint" style="margin:4px 0 0;text-align:center"></p>' + legendHtml(p.def !== 'none') +
     '<div class="frames" id="frames"></div>' +
     '<label class="field" style="margin-top:10px"><span id="notelbl">이 단계 설명</span><textarea id="fnote" rows="3" placeholder="예: 5번이 올라와 1번 수비에게 스크린"></textarea></label>' +
     '<div class="btns" style="margin-top:8px"><button class="btn sm" data-act="defreset">수비 자동 위치로</button><button class="btn sm" data-act="playall">▶ 처음부터 움직임 보기</button></div>' +
@@ -334,7 +336,8 @@ function renderPatternEdit(id) {
   $('#fnote').oninput = function () { p.frames[PE.i].note = this.value; save(); peCheck() };
   $$('[data-tool]').forEach(function (b) { b.onclick = function () { PE.tool = b.dataset.tool; $$('[data-tool]').forEach(function (x) { x.classList.toggle('on', x === b) }); peHelp() } });
   peWireCourt();
-  peDraw(); peHelp();
+  $$('[data-pz]').forEach(function (b) { b.onclick = function () { peZoom(+b.dataset.pz) } });
+  peDraw(); peHelp(); peApplyZoom(false);
 }
 function peHelp() {
   $('#toolhelp').textContent = {
@@ -366,10 +369,42 @@ function svgPoint(svg, e) {
   var r = pt.matrixTransform(svg.getScreenCTM().inverse());
   return [Math.max(-2, Math.min(52, r.x)), Math.max(-4, Math.min(PE && isFull(PE.p) ? 98 : 47.5, r.y))];
 }
+var PE_ZOOMS = [1, 1.5, 2, 2.5, 3];
+function peZoom(dir) {
+  var i = PE_ZOOMS.indexOf(PE.zoom); if (i < 0) i = 0;
+  var z = dir === 0 ? 1 : PE_ZOOMS[Math.max(0, Math.min(PE_ZOOMS.length - 1, i + dir))];
+  if (z === PE.zoom) return;
+  PE.zoom = z; S.ui = S.ui || {}; S.ui.peZoom = z; save(); peApplyZoom(true);
+}
+function peApplyZoom(keep) {
+  var w = $('#pewrap'), svg = $('#court'); if (!w || !svg) return;
+  var old = svg.getBoundingClientRect().width, cx = (w.scrollLeft + w.clientWidth / 2) / (old || 1), cy = (w.scrollTop + w.clientHeight / 2) / (old || 1);
+  var zoomed = PE.zoom > 1;
+  w.classList.toggle('zoomed', zoomed);
+  svg.style.width = (PE.zoom * 100) + '%';
+  svg.style.maxHeight = zoomed ? 'none' : '';
+  if (zoomed) {
+    var nav = $('#nav'), top = $('.top');
+    w.style.height = Math.max(260, Math.min(svg.getBoundingClientRect().height, window.innerHeight - (nav ? nav.offsetHeight : 0) - (top ? top.offsetHeight : 0) - 150)) + 'px';
+  } else w.style.height = '';
+  if (keep && zoomed) { var nw = svg.getBoundingClientRect().width; w.scrollLeft = cx * nw - w.clientWidth / 2; w.scrollTop = cy * nw - w.clientHeight / 2 }
+  $('#pezl').textContent = Math.round(PE.zoom * 100) + '%';
+  $('#pehint').textContent = zoomed ? '빈 곳을 끌거나 두 손가락으로 밀면 코트가 움직여요' : '＋ 를 누르면 코트가 커져요';
+}
+function peMid() { var ps = Object.keys(PE.ptrs).map(function (k) { return PE.ptrs[k] }), x = 0, y = 0; ps.forEach(function (q) { x += q[0]; y += q[1] }); return ps.length ? [x / ps.length, y / ps.length] : [0, 0] }
+function peStartPan() { var w = $('#pewrap'); PE.pan = { mid: peMid(), sl: w.scrollLeft, st: w.scrollTop } }
 function peWireCourt() {
   var svg = $('#court');
   svg.addEventListener('pointerdown', function (e) {
-    var g = e.target.closest('[data-pid]'); if (!g || g.getAttribute('opacity')) return;
+    PE.ptrs[e.pointerId] = [e.clientX, e.clientY];
+    var zoomed = PE.zoom > 1;
+    if (Object.keys(PE.ptrs).length >= 2) { // 두 손가락: 끌던 선수는 놓고 화면 이동
+      if (PE.drag) { PE.drag = null; peDraw() }
+      if (zoomed) { e.preventDefault(); peStartPan() }
+      return;
+    }
+    var g = e.target.closest('[data-pid]');
+    if (!g || g.getAttribute('opacity')) { if (zoomed) { e.preventDefault(); try { svg.setPointerCapture(e.pointerId) } catch (x) {} peStartPan() } return }
     var pid = g.dataset.pid, side = pid[0], k = pid.slice(1), p = PE.p, f = p.frames[PE.i];
     if (PE.tool === 'ball') { if (side === 'o') { f.ball = k; save(); peDraw() } return }
     if (PE.tool === 'screen') {
@@ -381,16 +416,23 @@ function peWireCourt() {
     if (side === 'x' && p.def === 'none') return;
     e.preventDefault();
     PE.drag = { side: side, k: k, id: e.pointerId };
-    svg.setPointerCapture(e.pointerId);
+    try { svg.setPointerCapture(e.pointerId) } catch (x) {}
   });
   svg.addEventListener('pointermove', function (e) {
+    if (PE && PE.ptrs[e.pointerId]) PE.ptrs[e.pointerId] = [e.clientX, e.clientY];
+    if (PE && PE.pan) { var m = peMid(), w = $('#pewrap'); w.scrollLeft = PE.pan.sl - (m[0] - PE.pan.mid[0]); w.scrollTop = PE.pan.st - (m[1] - PE.pan.mid[1]); return }
     var d = PE && PE.drag; if (!d || d.id !== e.pointerId) return;
     var pt = svgPoint(svg, e).map(f1), f = PE.p.frames[PE.i];
     if (d.side === 'o') f.o[d.k] = pt;
     else { f.x = f.x || {}; f.x[d.k] = pt }
     $('#dyn').innerHTML = courtFrame(normPattern(PE.p), PE.i, { showD: PE.p.def !== 'none' });
   });
-  function end(e) { if (PE && PE.drag && PE.drag.id === e.pointerId) { PE.drag = null; save(); peDraw() } }
+  function end(e) {
+    if (!PE) return;
+    delete PE.ptrs[e.pointerId];
+    if (PE.pan) { if (Object.keys(PE.ptrs).length) peStartPan(); else PE.pan = null; return }
+    if (PE.drag && PE.drag.id === e.pointerId) { PE.drag = null; save(); peDraw() }
+  }
   svg.addEventListener('pointerup', end);
   svg.addEventListener('pointercancel', end);
 }
