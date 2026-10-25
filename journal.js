@@ -69,9 +69,10 @@ function renderTJ(date) {
     '<label class="tj-dlabel"><b>' + d.getFullYear() + '. ' + (d.getMonth() + 1) + '. ' + d.getDate() + ' (' + wd + ')</b><small>' + (date === today() ? '오늘' : tjHas(e) ? '✓ 쓴 날' : '날짜 바꾸기') + '</small><input type="date" id="tjpick" value="' + date + '"></label>' +
     '<button class="btn" data-tj="next" aria-label="다음날">▶</button>' + (date !== today() ? '<button class="btn sm" data-tj="today">오늘</button>' : '') + '</div>' +
     '<div class="tj-tools"><div class="tj-row1"><div class="seg"><button data-tjm="text" class="' + (TJ.mode === 'text' ? 'on' : '') + '">⌨️ 글자</button><button data-tjm="pen" class="' + (TJ.mode === 'pen' ? 'on' : '') + '">✏️ 펜</button></div>' +
+    '<button class="btn tj-er" data-tj="eraser">🧽 지우개</button><button class="btn tj-er" data-tj="undo" aria-label="되돌리기">↶</button>' +
     '<div class="tj-zoom"><button class="btn" data-tj="zout" aria-label="작게">－</button><button class="btn sm" data-tj="zfit" id="tjzl">100%</button><button class="btn" data-tj="zin" aria-label="크게">＋</button></div></div>' +
     '<div class="tj-pen"' + (TJ.mode === 'pen' ? '' : ' hidden') + '><button class="btn sm" data-tj="finger" id="tjfinger">' + tjFingerLabel() + '</button>' + TJ_PENS.map(function (c) { return '<button class="tj-c' + (c === TJ.color ? ' on' : '') + '" data-tjc="' + c + '" style="background:' + c + '" aria-label="펜 색"></button>' }).join('') +
-    '<button class="btn sm" data-tj="thick">' + (TJ.width > 3 ? '굵게' : '얇게') + '</button><button class="btn sm" data-tjs="o">🔵 공격</button><button class="btn sm" data-tjs="x">🔴 수비</button><button class="btn sm" data-tjs="b">🟠 공</button><button class="btn sm" data-tj="eraser">🧽 지우개</button><button class="btn sm" data-tj="undo">↶</button><button class="btn sm" data-tj="clear">🗑</button></div></div>' +
+    '<button class="btn sm" data-tj="thick">' + (TJ.width > 3 ? '굵게' : '얇게') + '</button><button class="btn sm" data-tjs="o">🔵 공격</button><button class="btn sm" data-tjs="x">🔴 수비</button><button class="btn sm" data-tjs="b">🟠 공</button><button class="btn sm" data-tj="clear">🗑 필기 모두 지우기</button></div></div>' +
     '<div class="tj-wrap" id="tjwrap"><div class="tj-sizer" id="tjsizer"><div class="tj-inner" id="tjinner">' + tjPage1(date, e) + tjPage2(e) + '</div></div></div>' +
     '<p class="note" style="text-align:center">쓰는 대로 저장돼요 · ＋ 로 크게 해서 쓰세요 (크게 하면 손가락으로 밀어서 이동)<br>펜으로 쓸 때는 두 손가락으로 밀면 이동해요</p></div>';
   $('[data-f=cond]').value = e.cond || '';
@@ -142,7 +143,11 @@ function tjWire() {
     else if (a === 'zfit') tjZoom(0);
     else if (a === 'finger') { tjUi().tjFinger = tjUi().tjFinger === 'pan' ? 'draw' : 'pan'; save(); b.textContent = tjFingerLabel(); toast(tjUi().tjFinger === 'pan' ? '손가락으로 밀면 화면이 움직이고, 터치펜으로만 써져요' : '손가락으로도 써져요 (이동은 두 손가락)') }
     else if (a === 'thick') { TJ.width = TJ.width > 3 ? 3 : 6; b.textContent = TJ.width > 3 ? '굵게' : '얇게' }
-    else if (a === 'eraser') { TJ.eraser = !TJ.eraser; b.classList.toggle('pri', TJ.eraser); if (TJ.eraser) tjStamp(null) }
+    else if (a === 'eraser') {
+      if (TJ.mode !== 'pen') tjMode('pen');
+      TJ.eraser = !TJ.eraser; b.classList.toggle('pri', TJ.eraser);
+      if (TJ.eraser) { tjStamp(null); toast('지우고 싶은 곳을 문지르세요 (글자는 칸을 눌러 키보드로 지워요)') }
+    }
     else if (a === 'undo') tjUndo();
     else if (a === 'clear') confirmSheet('이 날 펜으로 쓴 것을 모두 지울까요?', function () { TJ.undo.push({ t: 'clear', ink: TJ.ink }); TJ.ink = { p1: [], p2: [] }; tjDrawAll(); tjSaveInk() });
     else if (a === 'loadlog') tjLoadLogs();
@@ -233,19 +238,36 @@ function tjSaveInk() {
   }, 400);
 }
 function tjPt(c, e) { var r = c.getBoundingClientRect(); return [Math.round((e.clientX - r.left) / r.width * TJ_W * 10) / 10, Math.round((e.clientY - r.top) / r.height * TJ_H * 10) / 10] }
+function tjSegDist(px, py, ax, ay, bx, by) {
+  var dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy, t = l ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l)) : 0;
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
 function tjErase(pg, pt) {
-  var keep = [], gone = [];
+  var r = Math.max(8, Math.min(40, 14 / (TJ.s || 1))), out = [], changed = false;
   TJ.ink[pg].forEach(function (st) {
-    var hit = false; for (var i = 0; i < st.p.length; i += 2) if (Math.hypot(st.p[i] - pt[0], st.p[i + 1] - pt[1]) < (st.t ? 16 : 12)) { hit = true; break }
-    (hit ? gone : keep).push(st);
+    if (st.t) { if (Math.hypot(st.p[0] - pt[0], st.p[1] - pt[1]) < r + 10) changed = true; else out.push(st); return }
+    var p = st.p, n = p.length / 2, hitPt = [], any = false, i;
+    for (i = 0; i < n; i++) { hitPt[i] = Math.hypot(p[i * 2] - pt[0], p[i * 2 + 1] - pt[1]) < r + st.w / 2; if (hitPt[i]) any = true }
+    var cutSeg = [];
+    for (i = 0; i < n - 1; i++) { cutSeg[i] = !hitPt[i] && !hitPt[i + 1] && tjSegDist(pt[0], pt[1], p[i * 2], p[i * 2 + 1], p[i * 2 + 2], p[i * 2 + 3]) < r; if (cutSeg[i]) any = true }
+    if (!any) { out.push(st); return }
+    changed = true;
+    var cur = [];
+    for (i = 0; i < n; i++) {
+      if (hitPt[i]) { if (cur.length >= 4) out.push({ c: st.c, w: st.w, p: cur }); cur = []; continue }
+      cur.push(p[i * 2], p[i * 2 + 1]);
+      if (i < n - 1 && cutSeg[i]) { if (cur.length >= 4) out.push({ c: st.c, w: st.w, p: cur }); cur = [] }
+    }
+    if (cur.length >= 4) out.push({ c: st.c, w: st.w, p: cur });
   });
-  if (gone.length) { TJ.ink[pg] = keep; TJ.undo.push({ t: 'erase', pg: pg, sts: gone }); tjDraw(pg); tjSaveInk() }
+  if (changed) { TJ.ink[pg] = out; if (TJ.cur && TJ.cur.erase) TJ.cur.changed = true; tjDraw(pg); tjSaveInk() }
 }
 function tjUndo() {
   var a = TJ.undo.pop(); if (!a) { toast('되돌릴 게 없어요'); return }
   if (a.t === 'add') TJ.ink[a.pg] = TJ.ink[a.pg].filter(function (s) { return s !== a.st });
   else if (a.t === 'erase') TJ.ink[a.pg] = TJ.ink[a.pg].concat(a.sts);
   else if (a.t === 'clear') TJ.ink = a.ink;
+  else if (a.t === 'snap') TJ.ink[a.pg] = a.before;
   tjDrawAll(); tjSaveInk();
 }
 function tjMid() {
@@ -270,7 +292,7 @@ function tjWireInk(c) {
       }
     }
     var pt = tjPt(c, e);
-    if (TJ.eraser) { TJ.cur = { erase: true, id: e.pointerId }; tjErase(pg, pt); return }
+    if (TJ.eraser) { TJ.cur = { erase: true, id: e.pointerId, before: TJ.ink[pg].slice() }; tjErase(pg, pt); return }
     if (TJ.stamp) {
       var same = TJ.ink[pg].filter(function (x) { return x.t === TJ.stamp }).length;
       var sp = { t: TJ.stamp, n: TJ.stamp === 'b' ? 0 : same % 5 + 1, p: pt };
@@ -305,6 +327,7 @@ function tjWireInk(c) {
     }
     var cur = TJ && TJ.cur; if (!cur || cur.id !== e.pointerId) return;
     TJ.cur = null;
+    if (cur.erase && cur.changed) TJ.undo.push({ t: 'snap', pg: pg, before: cur.before });
     if (cur.st) { if (cur.st.p.length === 2) tjDraw(pg); TJ.undo.push({ t: 'add', pg: pg, st: cur.st }); tjSaveInk() }
   }
   c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end);
