@@ -61,7 +61,7 @@ function renderTJ(date) {
   TJ = { date: date, page: keepPage || 1, mode: (TJ && TJ.mode) || 'text', color: (TJ && TJ.color) || TJ_PENS[0], width: (TJ && TJ.width) || 3, eraser: false, ink: { p1: [], p2: [] }, undo: [], cur: null };
   var d = new Date(date + 'T12:00:00'), wd = '일월화수목금토'[d.getDay()];
   $('#app').innerHTML =
-    '<div class="top"><h1>훈련일지</h1><button class="iconbtn" data-tj="list" aria-label="지난 일지">📚</button></div>' +
+    '<div class="top"><h1>훈련일지</h1><button class="iconbtn" data-tj="list" aria-label="지난 일지 달력">📅</button></div>' +
     '<div class="wrap" style="max-width:1480px">' +
     '<div class="tj-date"><button class="btn" data-tj="prev" aria-label="전날">◀</button>' +
     '<label class="tj-dlabel"><b>' + d.getFullYear() + '. ' + (d.getMonth() + 1) + '. ' + d.getDate() + ' (' + wd + ')</b><small>' + (date === today() ? '오늘' : tjHas(e) ? '✓ 쓴 날' : '날짜 바꾸기') + '</small><input type="date" id="tjpick" value="' + date + '"></label>' +
@@ -137,16 +137,32 @@ function tjBodyTap(ev, svg) {
   tjSet(TJ.date, 'body', body);
   svg.outerHTML = tjBody(tjGet(TJ.date));
 }
+/* 지난 일지: 달력으로 보기. 일지 쓴 날 = 마음 표정(없으면 ✓), 연습 기록만 있는 날 = 🏀 점 */
 function tjListSheet() {
-  var all = tjAll(), dates = Object.keys(all).filter(function (d) { return tjHas(all[d]) }).sort().reverse();
-  sheet('<h3>📚 지난 훈련일지</h3>' + (dates.length ? '<div class="tj-list">' + dates.map(function (d) {
-    var e = all[d], first = (e.content || e.good || e.coach || '').split('\n')[0];
-    return '<button data-go="' + d + '"><b>' + d.replace(/-/g, '. ') + ' (' + '일월화수목금토'[new Date(d + 'T12:00:00').getDay()] + ')</b>' +
-      '<span>' + (e.mind ? TJ_MIND[e.mind - 1][0] + ' ' : '') + (e.sat ? '★'.repeat(e.sat) + ' ' : '') + (e.ink ? '✏️' : '') + '</span>' + (first ? '<small>' + esc(first.slice(0, 40)) + '</small>' : '') + '</button>';
-  }).join('') + '</div>' : '<p class="note">아직 쓴 일지가 없어요.</p>') + '<button class="btn" id="no">닫기</button>', function (s, close) {
-    $('#no', s).onclick = close;
-    $$('[data-go]', s).forEach(function (b) { b.onclick = function () { close(); location.hash = '#/tj/' + b.dataset.go } });
-  });
+  var all = tjAll(), cur = TJ.date.slice(0, 7), logDays = {};
+  S.logs.forEach(function (l) { logDays[l.date] = 1 });
+  var nWritten = Object.keys(all).filter(function (d) { return tjHas(all[d]) }).length;
+  sheet('<h3>📚 지난 훈련일지 <small class="note">' + nWritten + '일 썼어요</small></h3><div id="tjcal"></div>' +
+    '<div class="tjc-legend"><span><i class="w"></i>일지 쓴 날</span><span>🏀 연습만 한 날</span><span><i class="t"></i>오늘</span></div>' +
+    '<button class="btn" id="no">닫기</button>', function (s, close) {
+      $('#no', s).onclick = close;
+      function draw() {
+        var y = +cur.slice(0, 4), m = +cur.slice(5, 7), first = new Date(y, m - 1, 1), days = new Date(y, m, 0).getDate();
+        var lead = first.getDay(), h = '<div class="tjc-head"><button class="btn" data-mv="-1" aria-label="이전 달">◀</button><b>' + y + '년 ' + m + '월</b><button class="btn" data-mv="1" aria-label="다음 달">▶</button></div><div class="tjc-grid">' +
+          '일월화수목금토'.split('').map(function (c, i) { return '<span class="tjc-wd' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '') + '">' + c + '</span>' }).join('');
+        for (var i = 0; i < lead; i++) h += '<span></span>';
+        for (var d = 1; d <= days; d++) {
+          var ds = cur + '-' + String(d).padStart(2, '0'), e = all[ds], w = tjHas(e);
+          var mark = w ? (e.mind ? TJ_MIND[e.mind - 1][0] : '✓') : logDays[ds] ? '🏀' : '';
+          h += '<button class="tjc-d' + (w ? ' w' : '') + (ds === today() ? ' t' : '') + (ds === TJ.date ? ' sel' : '') + '" data-go="' + ds + '"><b>' + d + '</b><span>' + mark + '</span>' +
+            (w && e.sat ? '<small>' + '★'.repeat(e.sat) + '</small>' : '') + '</button>';
+        }
+        $('#tjcal', s).innerHTML = h + '</div>';
+        $$('[data-mv]', s).forEach(function (b) { b.onclick = function () { var dt = new Date(y, m - 1 + +b.dataset.mv, 1); cur = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0'); draw() } });
+        $$('[data-go]', s).forEach(function (b) { b.onclick = function () { close(); location.hash = '#/tj/' + b.dataset.go } });
+      }
+      draw();
+    });
 }
 
 /* ---------- 펜 필기 ---------- */
