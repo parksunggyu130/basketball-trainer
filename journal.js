@@ -1,10 +1,9 @@
-/* 훈련일지: 종이 양식(2쪽)과 같은 모양. 글자 입력 + 펜(손가락·터치펜) 필기. 날짜별로 저장.
-   글자·선택값은 S.tj[날짜], 필기는 IndexedDB 'ink:날짜' 에 저장 (용량이 커서).
+/* 훈련일지: 종이 양식(2쪽)과 같은 모양을 세로로 이어 붙임. 글자는 키보드로 입력, 날짜별로 저장(S.tj[날짜]).
+   운동 내용의 "패턴 그림"은 패턴 편집기로 그리는 그날의 패턴(S.patterns 의 id 'tj-날짜', tjDate 표시).
    index.html 의 공용 함수($, esc, S, save, vdb, today, sheet, toast, confirmSheet …)를 쓴다 */
 'use strict';
 var TJ_W = 700, TJ_H = 1010;
 var TJ_MIND = [['😍', '최고'], ['😊', '좋음'], ['😐', '보통'], ['😩', '피곤'], ['😵', '힘듦'], ['😠', '화남']];
-var TJ_PENS = ['#1D1B19', '#1F5FBF', '#D0342C'];
 var TJ = null;
 var TJ_ZOOMS = [1, 1.3, 1.6, 2, 2.5, 3];
 function tjUi() { return (S.ui = S.ui || {}) }
@@ -12,7 +11,7 @@ function tjUi() { return (S.ui = S.ui || {}) }
 function tjAll() { return (S.tj = S.tj || {}) }
 function tjGet(date) { return tjAll()[date] || {} }
 function tjSet(date, k, v) { var a = tjAll(); a[date] = a[date] || {}; a[date][k] = v; save() }
-function tjHas(e) { return !!(e && (e.content || e.coach || e.good || e.fix || e.stress || e.cond || e.mind || e.sat || (e.body && e.body.length) || e.ink)) }
+function tjHas(e) { return !!(e && (e.content || e.coach || e.good || e.fix || e.stress || e.cond || e.mind || e.sat || (e.body && e.body.length) || e.pat)) }
 function tjShift(date, n) { var d = new Date(date + 'T12:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') }
 function tjWeekday(date) { return (new Date(date + 'T12:00:00').getDay() + 6) % 7 } // 월=0 … 일=6
 
@@ -23,11 +22,9 @@ function tjPage1(date, e) {
     '<div class="tj-wd">' + '월화수목금토일'.split('').map(function (c, i) { return '<span class="' + (i === wd ? 'on' : '') + '">' + c + '</span>' }).join('') + '</div></div>' +
     '<div class="tj-lbl">운동 내용 <button class="tj-mini" data-tj="loadlog">📋 오늘 기록 불러오기</button></div>' +
     '<div class="tj-crow"><textarea class="tj-area lined" data-f="content" style="height:470px" placeholder="오늘 한 운동을 적어요">' + esc(e.content || '') + '</textarea>' +
-    '<div class="tj-courtbox"><div class="tj-courth">패턴 그림</div><svg viewBox="' + VB + '" aria-label="패턴을 그리는 하프코트">' + courtBase(false) + '</svg>' +
-    '<small>✏️ 펜에서 🔵공격 🔴수비 🟠공 도장을 찍고<br>선으로 움직임을 그려요</small></div></div>' +
+    '<div class="tj-courtbox" id="tjpat">' + tjPatBox(date) + '</div></div>' +
     '<div class="tj-lbl" style="margin-top:18px">피드백</div>' +
-    '<div class="tj-box"><div class="tj-boxh">지도자의 피드백</div><textarea class="tj-area lined" data-f="coach" style="height:262px" placeholder="코치님·부모님이 해 준 말">' + esc(e.coach || '') + '</textarea></div>' +
-    '<canvas class="tj-ink" data-pg="p1" width="' + TJ_W * 2 + '" height="' + TJ_H * 2 + '"></canvas></div>';
+    '<div class="tj-box"><div class="tj-boxh">지도자의 피드백</div><textarea class="tj-area lined" data-f="coach" style="height:262px" placeholder="코치님·부모님이 해 준 말">' + esc(e.coach || '') + '</textarea></div></div>';
 }
 function tjBody(e) {
   var marks = (e.body || []).map(function (m) { return '<g class="tj-x"><circle cx="' + m[0] + '" cy="' + m[1] + '" r="9" fill="rgba(208,52,44,.18)"/><path d="M' + (m[0] - 6) + ' ' + (m[1] - 6) + 'L' + (m[0] + 6) + ' ' + (m[1] + 6) + 'M' + (m[0] + 6) + ' ' + (m[1] - 6) + 'L' + (m[0] - 6) + ' ' + (m[1] + 6) + '" stroke="#D0342C" stroke-width="3" stroke-linecap="round"/></g>' }).join('');
@@ -53,14 +50,13 @@ function tjPage2(e) {
     '<div class="tj-row"><span>오늘의 운동 만족도</span><div class="tj-stars">' + [1, 2, 3, 4, 5].map(function (n) { return '<button data-sat="' + n + '" aria-label="' + n + '점">' + (n <= sat ? '★' : '☆') + '</button>' }).join('') + '</div></div>' +
     '<div class="tj-q">오늘의 부상, 컨디션 또는 심리상태가 어땠나요?</div>' +
     '<div class="tj-cond"><textarea class="tj-area lined" data-f="cond" style="height:226px"></textarea><div class="tj-body">' + tjBody(e) + '<small>아픈 곳을 눌러 표시</small></div></div>' +
-    '<div class="tj-quote">잘못이 부끄러운 것이 아니라, 잘못을 고치지 못하는 것이 부끄러운 것이다.<small>- 루소 -</small></div>' +
-    '<canvas class="tj-ink" data-pg="p2" width="' + TJ_W * 2 + '" height="' + TJ_H * 2 + '"></canvas></div>';
+    '<div class="tj-quote">잘못이 부끄러운 것이 아니라, 잘못을 고치지 못하는 것이 부끄러운 것이다.<small>- 루소 -</small></div></div>';
 }
 
 function renderTJ(date) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) date = today();
-  var e = tjGet(date), keepPage = TJ && TJ.page;
-  TJ = { date: date, page: keepPage || 1, mode: (TJ && TJ.mode) || 'text', color: (TJ && TJ.color) || TJ_PENS[0], width: (TJ && TJ.width) || 3, eraser: false, ink: { p1: [], p2: [] }, undo: [], cur: null, zoom: (TJ && TJ.zoom) || tjUi().tjZoom || 0, s: 1, touches: {}, gest: null };
+  var e = tjGet(date);
+  TJ = { date: date, zoom: (TJ && TJ.zoom) || tjUi().tjZoom || 0, s: 1, fi: 0 };
   var d = new Date(date + 'T12:00:00'), wd = '일월화수목금토'[d.getDay()];
   $('#app').innerHTML =
     '<div class="top"><h1>훈련일지</h1><button class="iconbtn" data-tj="list" aria-label="지난 일지 달력">📅</button></div>' +
@@ -68,20 +64,15 @@ function renderTJ(date) {
     '<div class="tj-date"><button class="btn" data-tj="prev" aria-label="전날">◀</button>' +
     '<label class="tj-dlabel"><b>' + d.getFullYear() + '. ' + (d.getMonth() + 1) + '. ' + d.getDate() + ' (' + wd + ')</b><small>' + (date === today() ? '오늘' : tjHas(e) ? '✓ 쓴 날' : '날짜 바꾸기') + '</small><input type="date" id="tjpick" value="' + date + '"></label>' +
     '<button class="btn" data-tj="next" aria-label="다음날">▶</button>' + (date !== today() ? '<button class="btn sm" data-tj="today">오늘</button>' : '') + '</div>' +
-    '<div class="tj-tools"><div class="tj-row1"><div class="seg"><button data-tjm="text" class="' + (TJ.mode === 'text' ? 'on' : '') + '">⌨️ 글자</button><button data-tjm="pen" class="' + (TJ.mode === 'pen' ? 'on' : '') + '">✏️ 펜</button></div>' +
-    '<button class="btn tj-er" data-tj="eraser">🧽 지우개</button><button class="btn tj-er" data-tj="undo" aria-label="되돌리기">↶</button>' +
-    '<div class="tj-zoom"><button class="btn" data-tj="zout" aria-label="작게">－</button><button class="btn sm" data-tj="zfit" id="tjzl">100%</button><button class="btn" data-tj="zin" aria-label="크게">＋</button></div></div>' +
-    '<div class="tj-pen"' + (TJ.mode === 'pen' ? '' : ' hidden') + '><button class="btn sm" data-tj="finger" id="tjfinger">' + tjFingerLabel() + '</button>' + TJ_PENS.map(function (c) { return '<button class="tj-c' + (c === TJ.color ? ' on' : '') + '" data-tjc="' + c + '" style="background:' + c + '" aria-label="펜 색"></button>' }).join('') +
-    '<button class="btn sm" data-tj="thick">' + (TJ.width > 3 ? '굵게' : '얇게') + '</button><button class="btn sm" data-tjs="o">🔵 공격</button><button class="btn sm" data-tjs="x">🔴 수비</button><button class="btn sm" data-tjs="b">🟠 공</button><button class="btn sm" data-tj="clear">🗑 필기 모두 지우기</button></div></div>' +
+    '<div class="tj-tools"><div class="tj-row1"><span class="note">⌨️ 칸을 누르고 키보드로 써요</span>' +
+    '<div class="tj-zoom"><button class="btn" data-tj="zout" aria-label="작게">－</button><button class="btn sm" data-tj="zfit" id="tjzl">100%</button><button class="btn" data-tj="zin" aria-label="크게">＋</button></div></div></div>' +
     '<div class="tj-wrap" id="tjwrap"><div class="tj-sizer" id="tjsizer"><div class="tj-inner" id="tjinner">' + tjPage1(date, e) + tjPage2(e) + '</div></div></div>' +
-    '<p class="note" style="text-align:center">쓰는 대로 저장돼요 · ＋ 로 크게 해서 쓰세요 (크게 하면 손가락으로 밀어서 이동)<br>펜으로 쓸 때는 두 손가락으로 밀면 이동해요</p></div>';
+    '<p class="note" style="text-align:center">쓰는 대로 저장돼요 · ＋ 로 크게 볼 수 있어요 (크게 하면 손가락으로 밀어서 이동) · ❓ 도움말 탭에 자세한 설명</p></div>';
   $('[data-f=cond]').value = e.cond || '';
-  tjWire(); tjMode(TJ.mode); tjFit();
+  tjWire(); tjFit(); tjPatShow();
   /* 스크롤바가 생기거나 화면 폭이 바뀌면 다시 맞춘다 (오른쪽 잘림 방지) */
   if (window.ResizeObserver) { var lastW = 0, ro = new ResizeObserver(function () { var el = $('#tjwrap'); if (!el || !TJ) { ro.disconnect(); return } var cw = el.parentNode.clientWidth; if (cw !== lastW) { lastW = cw; tjFit(true) } }); ro.observe($('#tjwrap').parentNode) }
-  vdb.get('ink:' + date).then(function (ink) { if (!TJ || TJ.date !== date) return; if (ink) TJ.ink = { p1: ink.p1 || [], p2: ink.p2 || [] }; tjDrawAll() }).catch(function () {});
 }
-function tjFingerLabel() { return tjUi().tjFinger === 'pan' ? '☝️ 손가락: 이동' : '☝️ 손가락: 쓰기' }
 /* 화면 맞춤 배율 × 확대(zoom). 확대하면 일지 칸 안에서 위아래·옆으로 밀어서 본다 */
 function tjFit(keep) {
   var w = $('#tjwrap'), sizer = $('#tjsizer'), inner = $('#tjinner'); if (!w || !inner) return;
@@ -114,22 +105,11 @@ function tjZoom(dir) {
   if (z > 1) { var w = $('#tjwrap'), top = $('.top'), tools = $('.tj-tools'); window.scrollTo({ top: w.getBoundingClientRect().top + window.scrollY - (top ? top.offsetHeight : 0) - tools.offsetHeight - 6, behavior: 'smooth' }) }
 }
 window.addEventListener('resize', function () { if (TJ && $('#tjwrap')) tjFit(true) });
-function tjMode(m) {
-  TJ.mode = m; TJ.eraser = false; tjStamp(null);
-  $$('.tj-ink').forEach(function (c) { c.classList.toggle('pen', m === 'pen') });
-  $$('[data-tjm]').forEach(function (b) { b.classList.toggle('on', b.dataset.tjm === m) });
-  $('.tj-pen').hidden = m !== 'pen';
-  var er = $('[data-tj=eraser]'); if (er) er.classList.remove('pri');
-}
 function tjWire() {
   var date = TJ.date;
   $$('[data-f]').forEach(function (el) { el.addEventListener('input', function () { tjSet(date, el.dataset.f, el.value) }) });
   $$('[data-mind]').forEach(function (b) { b.onclick = function () { var v = +b.dataset.mind; v = tjGet(date).mind === v ? 0 : v; tjSet(date, 'mind', v); $$('[data-mind]').forEach(function (x) { x.classList.toggle('on', +x.dataset.mind === v) }) } });
   $$('[data-sat]').forEach(function (b) { b.onclick = function () { var v = +b.dataset.sat; v = tjGet(date).sat === v ? 0 : v; tjSet(date, 'sat', v); $$('[data-sat]').forEach(function (x) { x.textContent = +x.dataset.sat <= v ? '★' : '☆' }) } });
-  $$('[data-tjm]').forEach(function (b) { b.onclick = function () { tjMode(b.dataset.tjm); if (b.dataset.tjm === 'pen') toast('펜 모드: 일지 위에 손가락이나 터치펜으로 쓰세요') } });
-  $$('[data-tjs]').forEach(function (b) { b.onclick = function () { tjStamp(TJ.stamp === b.dataset.tjs ? null : b.dataset.tjs) } });
-  $$('[data-tjc]').forEach(function (b) { b.onclick = function () { TJ.color = b.dataset.tjc; TJ.eraser = false; tjStamp(null); $('[data-tj=eraser]').classList.remove('pri'); $$('[data-tjc]').forEach(function (x) { x.classList.toggle('on', x === b) }) } });
-  $$('[data-tjp]').forEach(function (b) { b.onclick = function () { TJ.page = +b.dataset.tjp; tjFit(); var w = $('#tjwrap'); w.scrollTop = 0; w.scrollLeft = 0 } });
   $('#tjpick').onchange = function () { if (this.value) location.hash = '#/tj/' + this.value };
   $('#app').onclick = function (ev) {
     var b = ev.target.closest('[data-tj]'); if (!b || !TJ) return;
@@ -141,19 +121,14 @@ function tjWire() {
     else if (a === 'zin') tjZoom(1);
     else if (a === 'zout') tjZoom(-1);
     else if (a === 'zfit') tjZoom(0);
-    else if (a === 'finger') { tjUi().tjFinger = tjUi().tjFinger === 'pan' ? 'draw' : 'pan'; save(); b.textContent = tjFingerLabel(); toast(tjUi().tjFinger === 'pan' ? '손가락으로 밀면 화면이 움직이고, 터치펜으로만 써져요' : '손가락으로도 써져요 (이동은 두 손가락)') }
-    else if (a === 'thick') { TJ.width = TJ.width > 3 ? 3 : 6; b.textContent = TJ.width > 3 ? '굵게' : '얇게' }
-    else if (a === 'eraser') {
-      if (TJ.mode !== 'pen') tjMode('pen');
-      TJ.eraser = !TJ.eraser; b.classList.toggle('pri', TJ.eraser);
-      if (TJ.eraser) { tjStamp(null); toast('지우고 싶은 곳을 문지르세요 (글자는 칸을 눌러 키보드로 지워요)') }
-    }
-    else if (a === 'undo') tjUndo();
-    else if (a === 'clear') confirmSheet('이 날 펜으로 쓴 것을 모두 지울까요?', function () { TJ.undo.push({ t: 'clear', ink: TJ.ink }); TJ.ink = { p1: [], p2: [] }; tjDrawAll(); tjSaveInk() });
+    else if (a === 'pdraw') tjPatEdit();
+    else if (a === 'pload') tjPatLoad();
+    else if (a === 'pprev') { if (TJ.fi > 0) { TJ.fi--; tjPatShow() } }
+    else if (a === 'pnext') tjPatNext();
+    else if (a === 'pplay') tjPatPlay();
     else if (a === 'loadlog') tjLoadLogs();
-    else if (a === 'body' && TJ.mode === 'text') tjBodyTap(ev, b);
+    else if (a === 'body') tjBodyTap(ev, b);
   };
-  $$('.tj-ink').forEach(tjWireInk);
 }
 function tjLoadLogs() {
   var logs = S.logs.filter(function (l) { return l.date === TJ.date });
@@ -198,137 +173,80 @@ function tjListSheet() {
     });
 }
 
-/* ---------- 펜 필기 ---------- */
-function tjCtx(c) { var g = c.getContext('2d'); g.setTransform(2, 0, 0, 2, 0, 0); g.lineCap = 'round'; g.lineJoin = 'round'; return g }
-function tjStamp(t) {
-  TJ.stamp = t;
-  $$('[data-tjs]').forEach(function (b) { b.classList.toggle('pri', b.dataset.tjs === t) });
-  if (t) { TJ.eraser = false; var er = $('[data-tj=eraser]'); if (er) er.classList.remove('pri') }
+/* ---------- 운동 내용의 패턴 그림 (패턴 편집기로 그리고, 여기서는 단계별로 보기·재생) ---------- */
+function tjPat(date) { return S.patterns.filter(function (p) { return p.tjDate === date })[0] }
+function tjPatBox(date) {
+  var p = tjPat(date), full = p && isFull(p);
+  var h = '<div class="tj-courth">패턴 그림' + (p ? ' · ' + p.frames.length + '단계' : '') + '</div>' +
+    '<svg class="tj-psvg' + (full ? ' full' : '') + '" viewBox="' + vbox(full) + '" aria-label="오늘의 패턴 그림">' + courtDefs() + courtBase(full) + '<g id="tjdyn"></g></svg>';
+  if (!p) return h + '<div class="tj-pempty">선수·공의 움직임을<br>단계별로 그려서 남겨요</div>' +
+    '<div class="tj-pbtns"><button class="tj-pb pri" data-tj="pdraw">✏️ 패턴 그리기</button><button class="tj-pb" data-tj="pload">📋 불러오기</button></div>';
+  return h + '<div class="tj-pctl"><button class="tj-pb" data-tj="pprev">◀</button><b id="tjpstep"></b><button class="tj-pb" data-tj="pnext">▶</button><button class="tj-pb play" data-tj="pplay">▶ 움직임</button></div>' +
+    '<div class="tj-pnote" id="tjpnote"></div>' +
+    '<div class="tj-pbtns"><button class="tj-pb pri" data-tj="pdraw">✏️ 고치기</button><button class="tj-pb" data-tj="pload">📋 다른 패턴</button></div>';
 }
-/* 도장: 공격 = 파란 원 + 번호, 수비 = 빨간 네모 + 번호, 공 = 주황 원 */
-function tjDrawStamp(g, st) {
-  var x = st.p[0], y = st.p[1];
-  g.save(); g.lineWidth = 2.5;
-  if (st.t === 'b') { g.fillStyle = '#F07A2E'; g.strokeStyle = '#7A2E08'; g.beginPath(); g.arc(x, y, 7, 0, 7); g.fill(); g.stroke() }
-  else {
-    if (st.t === 'o') { g.fillStyle = '#1F5FBF'; g.strokeStyle = '#fff'; g.beginPath(); g.arc(x, y, 12, 0, 7); g.fill(); g.stroke() }
-    else { g.fillStyle = '#fff'; g.strokeStyle = '#C8372D'; g.beginPath(); g.rect(x - 11, y - 11, 22, 22); g.fill(); g.stroke() }
-    g.fillStyle = st.t === 'o' ? '#fff' : '#C8372D'; g.font = 'bold 15px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(String(st.n), x, y + 1);
-  }
-  g.restore();
+function tjPatShow() {
+  var p = tjPat(TJ.date), g = $('#tjdyn'); if (!g) return;
+  if (!p) { g.innerHTML = ''; return }
+  var n = normPattern(p); if (TJ.fi >= n.frames.length) TJ.fi = n.frames.length - 1;
+  g.innerHTML = courtFrame(n, TJ.fi, { showD: p.def !== 'none' });
+  $('#tjpstep').textContent = (TJ.fi + 1) + ' / ' + n.frames.length;
+  $('#tjpnote').textContent = n.frames[TJ.fi].note || '';
 }
-function tjStroke(g, st) {
-  if (st.t) { tjDrawStamp(g, st); return }
-  var p = st.p; if (p.length < 2) return;
-  g.strokeStyle = st.c; g.lineWidth = st.w; g.beginPath(); g.moveTo(p[0], p[1]);
-  if (p.length === 2) { g.lineTo(p[0] + 0.1, p[1] + 0.1) }
-  for (var i = 2; i < p.length; i += 2) g.lineTo(p[i], p[i + 1]);
-  g.stroke();
+var tjRaf = 0;
+function tjTween(n, i, showD, cb) {
+  cancelAnimationFrame(tjRaf);
+  var t0 = performance.now();
+  (function tick(now) {
+    var g = $('#tjdyn'); if (!g) return;
+    var t = Math.min(1, (now - t0) / 1300); g.innerHTML = courtTween(n, i, t, showD);
+    if (t < 1) tjRaf = requestAnimationFrame(tick); else cb && cb();
+  })(t0);
 }
-function tjDraw(pg) { var c = $('.tj-ink[data-pg=' + pg + ']'); if (!c) return; var g = tjCtx(c); g.clearRect(0, 0, TJ_W, TJ_H); TJ.ink[pg].forEach(function (st) { tjStroke(g, st) }) }
-function tjDrawAll() { tjDraw('p1'); tjDraw('p2') }
-var tjSaveT = 0;
-function tjSaveInk() {
-  clearTimeout(tjSaveT);
-  var date = TJ.date, ink = TJ.ink;
-  tjSaveT = setTimeout(function () {
-    vdb.put('ink:' + date, ink).catch(function () { toast('필기를 저장하지 못했어요') });
-    tjSet(date, 'ink', ink.p1.length + ink.p2.length > 0);
-  }, 400);
+function tjPatNext() {
+  var p = tjPat(TJ.date); if (!p) return;
+  var n = normPattern(p);
+  if (TJ.fi >= n.frames.length - 1) { TJ.fi = 0; tjPatShow(); return }
+  $('#tjpnote').textContent = n.frames[TJ.fi + 1].note || '';
+  tjTween(n, TJ.fi + 1, p.def !== 'none', function () { TJ.fi++; tjPatShow() });
 }
-function tjPt(c, e) { var r = c.getBoundingClientRect(); return [Math.round((e.clientX - r.left) / r.width * TJ_W * 10) / 10, Math.round((e.clientY - r.top) / r.height * TJ_H * 10) / 10] }
-function tjSegDist(px, py, ax, ay, bx, by) {
-  var dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy, t = l ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l)) : 0;
-  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+function tjPatPlay() {
+  var p = tjPat(TJ.date); if (!p) return;
+  var n = normPattern(p), showD = p.def !== 'none';
+  TJ.fi = 0; tjPatShow();
+  (function step() {
+    if (!$('#tjdyn') || TJ.fi >= n.frames.length - 1) return;
+    setTimeout(function () { if (!$('#tjdyn')) return; $('#tjpnote').textContent = n.frames[TJ.fi + 1].note || ''; tjTween(n, TJ.fi + 1, showD, function () { TJ.fi++; tjPatShow(); step() }) }, 900);
+  })();
 }
-function tjErase(pg, pt) {
-  var r = Math.max(8, Math.min(40, 14 / (TJ.s || 1))), out = [], changed = false;
-  TJ.ink[pg].forEach(function (st) {
-    if (st.t) { if (Math.hypot(st.p[0] - pt[0], st.p[1] - pt[1]) < r + 10) changed = true; else out.push(st); return }
-    var p = st.p, n = p.length / 2, hitPt = [], any = false, i;
-    for (i = 0; i < n; i++) { hitPt[i] = Math.hypot(p[i * 2] - pt[0], p[i * 2 + 1] - pt[1]) < r + st.w / 2; if (hitPt[i]) any = true }
-    var cutSeg = [];
-    for (i = 0; i < n - 1; i++) { cutSeg[i] = !hitPt[i] && !hitPt[i + 1] && tjSegDist(pt[0], pt[1], p[i * 2], p[i * 2 + 1], p[i * 2 + 2], p[i * 2 + 3]) < r; if (cutSeg[i]) any = true }
-    if (!any) { out.push(st); return }
-    changed = true;
-    var cur = [];
-    for (i = 0; i < n; i++) {
-      if (hitPt[i]) { if (cur.length >= 4) out.push({ c: st.c, w: st.w, p: cur }); cur = []; continue }
-      cur.push(p[i * 2], p[i * 2 + 1]);
-      if (i < n - 1 && cutSeg[i]) { if (cur.length >= 4) out.push({ c: st.c, w: st.w, p: cur }); cur = [] }
-    }
-    if (cur.length >= 4) out.push({ c: st.c, w: st.w, p: cur });
-  });
-  if (changed) { TJ.ink[pg] = out; if (TJ.cur && TJ.cur.erase) TJ.cur.changed = true; tjDraw(pg); tjSaveInk() }
+function tjPatNew(date, src) {
+  var p;
+  if (src) {
+    var n = normPattern(src);
+    p = { court: src.court, def: src.def === 'manual' ? 'manual' : src.def, n: src.n, name: src.name,
+      frames: n.frames.map(function (f, i) { return { o: f.o, x: src.def === 'manual' ? f.x : clone(src.frames[i].x || {}), ball: f.ball, screen: f.screen, note: f.note } }) };
+  } else p = { def: 'auto', name: '오늘의 패턴', frames: [{ o: clone(FIVE_OUT), x: {}, ball: '1', screen: [], note: '' }] };
+  p.id = 'tj-' + date; p.tjDate = date; p.custom = true; p.cat = '훈련일지'; p.keys = []; p.q = [];
+  S.patterns = S.patterns.filter(function (x) { return x.tjDate !== date }); S.patterns.push(p);
+  tjSet(date, 'pat', true);
+  return p;
 }
-function tjUndo() {
-  var a = TJ.undo.pop(); if (!a) { toast('되돌릴 게 없어요'); return }
-  if (a.t === 'add') TJ.ink[a.pg] = TJ.ink[a.pg].filter(function (s) { return s !== a.st });
-  else if (a.t === 'erase') TJ.ink[a.pg] = TJ.ink[a.pg].concat(a.sts);
-  else if (a.t === 'clear') TJ.ink = a.ink;
-  else if (a.t === 'snap') TJ.ink[a.pg] = a.before;
-  tjDrawAll(); tjSaveInk();
+function tjPatEdit() {
+  var p = tjPat(TJ.date) || tjPatNew(TJ.date);
+  location.hash = '#/pe/' + encodeURIComponent(p.id);
 }
-function tjMid() {
-  var ps = Object.keys(TJ.touches).map(function (k) { return TJ.touches[k] }), x = 0, y = 0;
-  ps.forEach(function (p) { x += p[0]; y += p[1] });
-  return ps.length ? [x / ps.length, y / ps.length] : [0, 0];
-}
-function tjWireInk(c) {
-  var pg = c.dataset.pg;
-  c.addEventListener('pointerdown', function (e) {
-    if (!TJ || TJ.mode !== 'pen') return;
-    e.preventDefault(); try { c.setPointerCapture(e.pointerId) } catch (x) {}
-    if (e.pointerType === 'pen' && !tjUi().tjFinger) { tjUi().tjFinger = 'pan'; save(); var fb = $('#tjfinger'); if (fb) fb.textContent = tjFingerLabel(); toast('터치펜이 보여요: 펜으로 쓰고, 손가락으로 밀면 이동해요') }
-    if (e.pointerType === 'touch') {
-      TJ.touches[e.pointerId] = [e.clientX, e.clientY];
-      var ids = Object.keys(TJ.touches);
-      if (ids.length >= 2 || tjUi().tjFinger === 'pan') {
-        if (TJ.cur && TJ.cur.st && TJ.cur.touch) { TJ.ink[pg] = TJ.ink[pg].filter(function (x) { return x !== TJ.cur.st }); tjDraw(pg) } // 두 번째 손가락이 오면 쓰던 선은 취소
-        TJ.cur = null;
-        var w = $('#tjwrap'); TJ.gest = { mid: tjMid(), sl: w.scrollLeft, st: w.scrollTop, sy: window.scrollY };
-        return;
-      }
-    }
-    var pt = tjPt(c, e);
-    if (TJ.eraser) { TJ.cur = { erase: true, id: e.pointerId, before: TJ.ink[pg].slice() }; tjErase(pg, pt); return }
-    if (TJ.stamp) {
-      var same = TJ.ink[pg].filter(function (x) { return x.t === TJ.stamp }).length;
-      var sp = { t: TJ.stamp, n: TJ.stamp === 'b' ? 0 : same % 5 + 1, p: pt };
-      TJ.ink[pg].push(sp); TJ.undo.push({ t: 'add', pg: pg, st: sp }); tjDraw(pg); tjSaveInk(); return;
-    }
-    var st = { c: TJ.color, w: e.pointerType === 'pen' ? TJ.width * 0.8 : TJ.width, p: pt };
-    TJ.cur = { st: st, id: e.pointerId, touch: e.pointerType === 'touch' };
-    TJ.ink[pg].push(st);
-  });
-  c.addEventListener('pointermove', function (e) {
-    if (TJ && TJ.touches[e.pointerId]) {
-      TJ.touches[e.pointerId] = [e.clientX, e.clientY];
-      if (TJ.gest) {
-        var m = tjMid(), w = $('#tjwrap'), dx = m[0] - TJ.gest.mid[0], dy = m[1] - TJ.gest.mid[1];
-        if (w.classList.contains('zoomed')) { w.scrollLeft = TJ.gest.sl - dx; w.scrollTop = TJ.gest.st - dy }
-        else window.scrollTo(0, TJ.gest.sy - dy);
-        return;
-      }
-    }
-    var cur = TJ && TJ.cur; if (!cur || cur.id !== e.pointerId) return;
-    var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; if (!evs.length) evs = [e];
-    if (cur.erase) { evs.forEach(function (ev) { tjErase(pg, tjPt(c, ev)) }); return }
-    var g = tjCtx(c), p = cur.st.p;
-    g.strokeStyle = cur.st.c; g.lineWidth = cur.st.w; g.beginPath(); g.moveTo(p[p.length - 2], p[p.length - 1]);
-    evs.forEach(function (ev) { var q = tjPt(c, ev); p.push(q[0], q[1]); g.lineTo(q[0], q[1]) });
-    g.stroke();
-  });
-  function end(e) {
-    if (TJ && TJ.touches[e.pointerId]) {
-      delete TJ.touches[e.pointerId];
-      if (TJ.gest) { if (Object.keys(TJ.touches).length) { var w = $('#tjwrap'); TJ.gest = { mid: tjMid(), sl: w.scrollLeft, st: w.scrollTop, sy: window.scrollY } } else TJ.gest = null; return }
-    }
-    var cur = TJ && TJ.cur; if (!cur || cur.id !== e.pointerId) return;
-    TJ.cur = null;
-    if (cur.erase && cur.changed) TJ.undo.push({ t: 'snap', pg: pg, before: cur.before });
-    if (cur.st) { if (cur.st.p.length === 2) tjDraw(pg); TJ.undo.push({ t: 'add', pg: pg, st: cur.st }); tjSaveInk() }
-  }
-  c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end);
+function tjPatLoad() {
+  var date = TJ.date;
+  sheet('<h3>📋 패턴 불러오기</h3><p class="note" style="margin:0">고른 패턴을 오늘 일지에 복사해요. 불러온 뒤 ✏️ 고치기로 바꿀 수 있어요.</p>' +
+    '<div class="tj-list">' + allPatterns().map(function (p) { return '<button data-pp="' + esc(p.id) + '"><b>' + esc(p.name) + '</b><small>' + esc(p.cat) + ' · ' + p.frames.length + '단계' + (p.custom ? ' · 내 패턴' : '') + '</small></button>' }).join('') + '</div>' +
+    '<button class="btn" id="no">닫기</button>', function (s, close) {
+      $('#no', s).onclick = close;
+      $$('[data-pp]', s).forEach(function (b) {
+        b.onclick = function () {
+          var src = findPattern(b.dataset.pp); if (!src) return;
+          function go() { close(); tjPatNew(date, src); TJ.fi = 0; $('#tjpat').innerHTML = tjPatBox(date); tjPatShow(); toast('"' + src.name + '"를 불러왔어요') }
+          if (tjPat(date)) { close(); confirmSheet('지금 그린 패턴을 "' + src.name + '"로 바꿀까요?', function () { tjPatNew(date, src); TJ.fi = 0; $('#tjpat').innerHTML = tjPatBox(date); tjPatShow() }) } else go();
+        };
+      });
+    });
 }

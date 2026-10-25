@@ -403,6 +403,31 @@ html,body{font-size:17px}
 .pe-zbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 6px}
 .pe-wrap.zoomed{overflow:auto;-webkit-overflow-scrolling:touch;line-height:0}
 .pe-wrap.zoomed .courtsvg{margin:0}
+/* ---------- 일지 패턴 칸 ---------- */
+.tj-psvg{display:block;width:100%;height:auto;max-height:300px}
+.tj-psvg.full{width:auto;height:300px;margin:0 auto}
+.tj-pctl{display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 4px 2px}
+.tj-pctl b{font-size:15px;min-width:44px;text-align:center}
+.tj-pb{border:1px solid #bbb;background:#f6f6f6;border-radius:8px;font-size:15px;padding:6px 10px;color:#222;font-family:inherit}
+.tj-pb.pri{background:#E8641B;color:#fff;border-color:#E8641B}
+.tj-pb.play{background:#1F8A5B;color:#fff;border-color:#1F8A5B}
+.tj-pnote{font-size:14px;color:#444;padding:2px 8px;line-height:1.4;max-height:42px;overflow:hidden;text-align:center}
+.tj-pempty{text-align:center;color:#777;font-size:15px;line-height:1.5;margin-top:10px}
+.tj-pbtns{display:flex;gap:6px;justify-content:center;margin-top:auto;padding:8px}
+/* ---------- 패턴 편집 선수 수 ---------- */
+.pe-n{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+.pe-n .seg button{padding:7px 10px}
+/* ---------- 도움말 ---------- */
+.tile.on{border-color:var(--acc);background:var(--acc-soft)}
+.hsec h3{font-size:20px}
+.hq{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:8px;overflow:hidden}
+.hq summary{padding:14px;font-weight:700;font-size:17px;cursor:pointer;list-style:none;display:flex;gap:8px;align-items:center}
+.hq summary::-webkit-details-marker{display:none}
+.hq summary::before{content:'▸';color:var(--acc);transition:transform .2s}
+.hq[open] summary::before{transform:rotate(90deg)}
+.hq>div{padding:0 16px 14px;font-size:16px;line-height:1.7}
+.hq ul,.hq ol{margin:6px 0;padding-left:22px}
+.hq li{margin:3px 0}
 </style>
 </head>
 <body>
@@ -411,6 +436,7 @@ html,body{font-size:17px}
   <a href="#/" data-k="lib"><b>🏀</b>훈련</a>
   <a href="#/pat" data-k="pat"><b>📋</b>패턴</a>
   <a href="#/tj" data-k="tj"><b>📓</b>훈련일지</a>
+  <a href="#/help" data-k="help"><b>❓</b>도움말</a>
   <a href="#/log" data-k="log"><b>📅</b>기록</a>
 </nav>
 <script src="drills.js"></script>
@@ -421,6 +447,7 @@ html,body{font-size:17px}
 <script src="patterns-ui.js"></script>
 <script src="compare.js"></script>
 <script src="journal.js"></script>
+<script src="help.js"></script>
 <script>
 'use strict';
 var $=function(s,r){return (r||document).querySelector(s)};
@@ -525,7 +552,7 @@ function route(){
   stopPlayer();releaseWake();stopTimer();if(typeof pvStop==='function'){pvStop();stopAnim()}PV=null;PE=null;stopCompare();$('#app').onclick=null;
   var h=location.hash.replace(/^#/,'')||'/';
   var m;
-  $$('#nav a').forEach(function(a){a.classList.toggle('on',(a.dataset.k==='lib'&&(h==='/'||h==='/tips'||/^\/(d|c|t)\//.test(h)))||(a.dataset.k==='pat'&&/^\/(pat|pj|p\/|pe\/)/.test(h))||(a.dataset.k==='tj'&&/^\/tj/.test(h))||(a.dataset.k==='log'&&h==='/log'))});
+  $$('#nav a').forEach(function(a){a.classList.toggle('on',(a.dataset.k==='lib'&&(h==='/'||h==='/tips'||/^\/(d|c|t)\//.test(h)))||(a.dataset.k==='pat'&&/^\/(pat|pj|p\/|pe\/)/.test(h))||(a.dataset.k==='tj'&&/^\/tj/.test(h))||(a.dataset.k==='help'&&/^\/help/.test(h))||(a.dataset.k==='log'&&h==='/log'))});
   if((m=h.match(/^\/d\/(.+)$/))) renderDrill(decodeURIComponent(m[1]));
   else if((m=h.match(/^\/c\/(.+)$/))) renderCompare(decodeURIComponent(m[1]));
   else if((m=h.match(/^\/p\/(.+)$/))) renderPatternView(decodeURIComponent(m[1]));
@@ -536,6 +563,7 @@ function route(){
   else if(h==='/pj') renderJournal();
   else if((m=h.match(/^\/tj(?:\/(.+))?$/))) renderTJ(m[1]);
   else if(h==='/fav') renderTJ();
+  else if((m=h.match(/^\/help(?:\/(.+))?$/))) renderHelp(m[1]);
   else if(h==='/log') renderLog();
   else renderList(false);
   window.scrollTo(0,0);

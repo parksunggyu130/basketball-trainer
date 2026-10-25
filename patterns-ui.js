@@ -6,8 +6,9 @@ var PCOL = { o: '#1F5FBF', d: '#C8372D', ball: '#F07A2E', pass: '#E8641B', line:
 var VB = '-3 -5 56 53';
 
 function clone(o) { return JSON.parse(JSON.stringify(o)) }
-function allPatterns() { return PATTERNS.concat(S.patterns) }
-function findPattern(id) { return allPatterns().filter(function (p) { return p.id === id })[0] }
+/* 훈련일지에 그린 패턴(tjDate)은 패턴 목록에는 안 보이고 일지에서만 쓴다 */
+function allPatterns() { return PATTERNS.concat(S.patterns.filter(function (p) { return !p.tjDate })) }
+function findPattern(id) { return PATTERNS.concat(S.patterns).filter(function (p) { return p.id === id })[0] }
 
 /* 수비 자동 위치: 자기 선수에서 골대 쪽으로 약 1m */
 function autoDef(o) {
@@ -28,7 +29,14 @@ function normPattern(p) {
     if (p.def === 'manual') { x = Object.assign({}, pX, clone(f.x || {})); pX = x }
     else if (p.def === 'none') x = {};
     else { x = autoDef(o); for (k in (f.x || {})) x[k] = f.x[k] }
-    out.push({ o: o, x: x, ball: ball, screen: (f.screen || []).map(String), note: f.note || '' });
+    var oo = o, xx = x, sc = (f.screen || []).map(String), bb = ball;
+    if (p.n && p.n < 5) {
+      oo = {}; xx = {};
+      for (k in o) if (+k <= p.n) oo[k] = o[k];
+      for (k in x) if (+k <= p.n) xx[k] = x[k];
+      sc = sc.filter(function (q) { return +q <= p.n }); if (bb && +bb > p.n) bb = null;
+    }
+    out.push({ o: oo, x: xx, ball: bb, screen: sc, note: f.note || '' });
     pO = o; pB = ball;
   });
   return { frames: out };
@@ -294,6 +302,7 @@ function renderPatternEdit(id) {
     '<button class="iconbtn" data-act="pview" title="보기">▶</button></div>' +
     '<div class="wrap">' +
     '<div class="seg wide" id="tools"><button data-tool="move" class="on">✋ 선수 옮기기</button><button data-tool="ball">🏀 공 주기</button><button data-tool="screen">┳ 스크린</button></div>' +
+    '<div class="pe-n"><span class="note">👥 선수 수</span><div class="seg">' + [1, 2, 3, 4, 5].map(function (n) { return '<button data-pn="' + n + '" class="' + ((p.n || 5) === n ? 'on' : '') + '">' + n + '명</button>' }).join('') + '</div></div>' +
     '<p class="note" id="toolhelp" style="margin:6px 0"></p>' +
     '<div class="pe-zbar"><span class="note">코트 크기</span><div class="tj-zoom"><button class="btn" data-pz="-1" aria-label="작게">－</button><button class="btn sm" data-pz="0" id="pezl">100%</button><button class="btn" data-pz="1" aria-label="크게">＋</button></div></div>' +
     '<div class="court pe-wrap" id="pewrap">' + courtSvg('court', ' edit', isFull(p)) + '</div>' +
@@ -314,11 +323,18 @@ function renderPatternEdit(id) {
     '<button class="btn pri" data-act="pjw" style="width:100%;margin-top:12px">📓 이 패턴 일지 쓰기</button>' +
     '<button class="btn" data-act="pdel" style="color:var(--bad);margin:14px 0 24px">이 패턴 삭제</button></div></div>';
   var on = function (a, f) { var b = $('[data-act=' + a + ']'); if (b) b.onclick = f };
-  on('back', function () { location.hash = '#/p/' + encodeURIComponent(p.id) });
-  on('pview', function () { location.hash = '#/p/' + encodeURIComponent(p.id) });
+  var home = p.tjDate ? '#/tj/' + p.tjDate : '#/p/' + encodeURIComponent(p.id);
+  on('back', function () { location.hash = home });
+  on('pview', function () { location.hash = home });
+  $$('[data-pn]').forEach(function (b) { b.onclick = function () { var n = +b.dataset.pn; if (n >= 5) delete p.n; else p.n = n; save(); $$('[data-pn]').forEach(function (x) { x.classList.toggle('on', x === b) }); peDraw() } });
+  if (p.tjDate) { /* 일지용 패턴: 목록용 정보 칸은 숨기고 코트·수비 설정만 */
+    ['#pcat', '#psum', '#pkeys', '#pen', '#plv', '#pq'].forEach(function (q) { var el = $(q); if (el) (el.closest('.field') || el).hidden = true });
+    $$('#pcheck,[data-act=pjw]').forEach(function (el) { el.hidden = true });
+    var h3 = $('.sec h3'); $$('.sec h3').forEach(function (x) { if (x.textContent === '패턴 정보') x.textContent = '패턴 설정' });
+  }
   on('defreset', function () { PE.p.frames[PE.i].x = {}; if (p.def === 'manual' && PE.i === 0) PE.p.frames[0].x = autoDef(PE.p.frames[0].o); peSave(); peDraw() });
   on('playall', pePlayAll);
-  on('pdel', function () { confirmSheet('"' + p.name + '" 패턴을 지울까요?', function () { S.patterns = S.patterns.filter(function (x) { return x.id !== p.id }); delete S.pnotes[p.id]; delete S.fav['p:' + p.id]; save(); location.hash = '#/pat' }) });
+  on('pdel', function () { confirmSheet('"' + p.name + '" 패턴을 지울까요?', function () { S.patterns = S.patterns.filter(function (x) { return x.id !== p.id }); if (p.tjDate) { tjSet(p.tjDate, 'pat', false); location.hash = '#/tj/' + p.tjDate; return } delete S.pnotes[p.id]; delete S.fav['p:' + p.id]; save(); location.hash = '#/pat' }) });
   $('#pname').oninput = function () { p.name = this.value.trim() || '새 패턴'; save(); peCheck() };
   $('#pcat').onchange = function () { p.cat = this.value; save() };
   $('#pcourt').onchange = function () { p.court = this.value === 'full' ? 'full' : undefined; save(); renderPatternEdit(p.id) };
