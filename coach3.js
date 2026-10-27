@@ -3,7 +3,7 @@
   if (!window.DRILLS || !window.COACH_ST) return;
   var have = {}; DRILLS.forEach(function (d) { if (d.yt) have[d.yt] = 1 });
   var D = [];
-  var F = [];
+  var F = [["kim","UQ6Aco1fYqc","“자유롭게 드리블할 수 있어야 실전에서 나온다!” 청주여중 | 3학년 | 박시우","“자유롭게 드리블할 수 있어야 실전에서 나온다!” 청주여중 | 3학년 | 박시우"]];
   var P = {};
   D.forEach(function (r) { if (have[r[1]]) return; DRILLS.push({ id: (r[0] === 'kim' ? 'k3-' : 'm3-') + r[1], coach: r[0], yt: r[1], cat: r[2], level: r[3], name: r[4], summary: r[5], steps: COACH_ST[r[2]], checks: COACH_CH[r[2]], mistakes: [], equip: '공 1개', time: '10분', reps: '천천히 10회 → 보통 속도 10회', q: [], isNew: true }) });
   var b = DRILLS.filter(function (d) { return d.follow })[0];
