@@ -577,9 +577,20 @@
   "_IEQ_pUu9aQ",
   "_LIxGh9eK8Q",
   "_PC43Ix0dMg",
-  "UQ6Aco1fYqc"
+  "UQ6Aco1fYqc",
+  "eS3PK6rtot0"
  ],
- "drills": [],
+ "drills": [
+  [
+   "kim",
+   "eS3PK6rtot0",
+   "드리블",
+   "고급",
+   "속공 상황 확실한 임팩트를 만드는 쉐임갓 무브 4가지",
+   "속공 상황 확실한 임팩트를 만드는 쉐임갓 무브 4가지 — 코치님 영상을 보고 따라해 보세요.",
+   ""
+  ]
+ ],
  "follow": [
   [
    "kim",
@@ -589,5 +600,13 @@
    ""
   ]
  ],
- "patterns": {}
+ "patterns": {
+  "fb-3lane": [
+   {
+    "yt": "eS3PK6rtot0",
+    "coach": "kim",
+    "t": "속공 상황 확실한 임팩트를 만드는 쉐임갓 무브 4가지"
+   }
+  ]
+ }
 }
