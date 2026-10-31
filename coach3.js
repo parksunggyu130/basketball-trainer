@@ -2,7 +2,7 @@
 (function () {
   if (!window.DRILLS || !window.COACH_ST) return;
   var have = {}; DRILLS.forEach(function (d) { if (d.yt) have[d.yt] = 1 });
-  var D = [["kim","uQSw4ZPPKd8","드리블","중급","크로스잽 유로 마스터하는 방법","크로스잽 유로 마스터하는 방법 — 코치님 영상을 보고 따라해 보세요."],["ko","avL0p3w9ffs","슈팅","중급","언제까지 제자리 슛만 던질 거야?","언제까지 제자리 슛만 던질 거야? — 코치님 영상을 보고 따라해 보세요."],["kim","eS3PK6rtot0","드리블","고급","속공 상황 확실한 임팩트를 만드는 쉐임갓 무브 4가지","속공 상황 확실한 임팩트를 만드는 쉐임갓 무브 4가지 — 코치님 영상을 보고 따라해 보세요."]];
+  var D = [["ko","BWOr97h0Cuw","드리블","중급","3-Player Offensive Plays","3-Player Offensive Plays — 코치님 영상을 보고 따라해 보세요."],["kim","uQSw4ZPPKd8","드리블","중급","크로스잽 유로 마스터하는 방법","크로스잽 유로 마스터하는 방법 — 코치님 영상을 보고 따라해 보세요."],["ko","avL0p3w9ffs","슈팅","중급","언제까지 제자리 슛만 던질 거야?","언제까지 제자리 슛만 던질 거야? — 코치님 영상을 보고 따라해 보세요."],["kim","eS3PK6rtot0","드리블","고급","속공 상황 확실한 임팩트를 만드는 쉐임갓 무브 4가지","속공 상황 확실한 임팩트를 만드는 쉐임갓 무브 4가지 — 코치님 영상을 보고 따라해 보세요."]];
   var F = [["kim","zqxmDw48nmA","Behind-The-Back Workout 청주 사직초등학교 | 6학년 | 김채은","Behind-The-Back Workout 청주 사직초등학교 | 6학년 | 김채은"],["kim","UQ6Aco1fYqc","“자유롭게 드리블할 수 있어야 실전에서 나온다!” 청주여중 | 3학년 | 박시우","“자유롭게 드리블할 수 있어야 실전에서 나온다!” 청주여중 | 3학년 | 박시우"]];
   var P = {"fb-3lane":[{"yt":"eS3PK6rtot0","coach":"kim","t":"속공 상황 확실한 임팩트를 만드는 쉐임갓 무브 4가지"}]};
   D.forEach(function (r) { if (have[r[1]]) return; DRILLS.push({ id: (r[0] === 'kim' ? 'k3-' : 'm3-') + r[1], coach: r[0], yt: r[1], cat: r[2], level: r[3], name: r[4], summary: r[5], steps: COACH_ST[r[2]], checks: COACH_CH[r[2]], mistakes: [], equip: '공 1개', time: '10분', reps: '천천히 10회 → 보통 속도 10회', q: [], isNew: true }) });
