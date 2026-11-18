@@ -597,9 +597,20 @@
   "kCa1Ys_JHuI",
   "cDRlUMIBjjE",
   "6vlnF-l69Dg",
-  "-wQOvDF8Z4s"
+  "-wQOvDF8Z4s",
+  "sfaJCJg3KG0",
+  "w_mGFjou9ew"
  ],
  "drills": [
+  [
+   "kim",
+   "sfaJCJg3KG0",
+   "드리블",
+   "고급",
+   "크로스 스내치 이후 득점으로 연결되는 무브 옵션 5가지",
+   "크로스 스내치 이후 득점으로 연결되는 무브 옵션 5가지 — 코치님 영상을 보고 따라해 보세요.",
+   ""
+  ],
   [
    "ko",
    "-wQOvDF8Z4s",
@@ -771,6 +782,11 @@
    }
   ],
   "motion": [
+   {
+    "yt": "w_mGFjou9ew",
+    "coach": "ko",
+    "t": "3-Man Offensive Movement Dril"
+   },
    {
     "yt": "r7QVOsszCyM",
     "coach": "ko",
