@@ -605,9 +605,20 @@
   "ssSh7jCetFQ",
   "mRrBeP1UFco",
   "hz-iHuAqWrY",
-  "x0FiI5-UArQ"
+  "x0FiI5-UArQ",
+  "pNNvOqrF2k0",
+  "mfgv4ITUbj4"
  ],
  "drills": [
+  [
+   "kim",
+   "pNNvOqrF2k0",
+   "레이업",
+   "고급",
+   "최고의 스핀무브 피니시 5가지 움직임",
+   "최고의 스핀무브 피니시 5가지 움직임 — 코치님 영상을 보고 따라해 보세요.",
+   ""
+  ],
   [
    "kim",
    "hz-iHuAqWrY",
@@ -829,6 +840,11 @@
    }
   ],
   "motion": [
+   {
+    "yt": "mfgv4ITUbj4",
+    "coach": "ko",
+    "t": "3인 스크린 공격 전술"
+   },
    {
     "yt": "SsdX6wnwi1I",
     "coach": "ko",
